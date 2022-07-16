@@ -1,5 +1,5 @@
 # YOLOv7_OpenVINO
-This repository will demostrate how to dopley a offical YOLOv7 pre-trained model with OpenVINO runtime api
+This repository will demostrate how to deploy a offical YOLOv7 pre-trained model with OpenVINO runtime api
 
 ## 1 Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/yolov7)
 
