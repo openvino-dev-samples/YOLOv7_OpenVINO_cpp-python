@@ -17,8 +17,8 @@ class YOLOV7_OPENVINO(object):
         "sandwich", "orange", "broccoli", "carrot", "hot dog", "pizza", "donut", "cake", "chair", "couch",
         "potted plant", "bed", "dining table", "toilet", "tv", "laptop", "mouse", "remote", "keyboard", "cell phone",
         "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
-        "hair drier", "toothbrush",
-        ]
+        "hair drier", "toothbrush"
+       ]
         self.img_size = (640, 640) 
         self.conf_thres = 0.1
         self.iou_thres = 0.6
