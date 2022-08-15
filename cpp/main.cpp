@@ -36,6 +36,7 @@ inline float sigmoid(float x)
 
 cv::Mat letterbox(cv::Mat &src, int h, int w, std::vector<float> &padd)
 {
+    // Resize and pad image while meeting stride-multiple constraints
     int in_w = src.cols;
     int in_h = src.rows;
     int tar_w = w;
@@ -46,23 +47,31 @@ cv::Mat letterbox(cv::Mat &src, int h, int w, std::vector<float> &padd)
     int padd_w = tar_w - inside_w;
     int padd_h = tar_h - inside_h;
     cv::Mat resize_img;
+
+    // resize
     resize(src, resize_img, cv::Size(inside_w, inside_h));
 
+    // divide padding into 2 sides
     padd_w = padd_w / 2;
     padd_h = padd_h / 2;
     padd.push_back(padd_w);
     padd.push_back(padd_h);
+
+    // store the ratio
     padd.push_back(r);
     int top = int(round(padd_h - 0.1));
     int bottom = int(round(padd_h + 0.1));
     int left = int(round(padd_w - 0.1));
     int right = int(round(padd_w + 0.1));
+
+    // add border
     copyMakeBorder(resize_img, resize_img, top, bottom, left, right, 0, cv::Scalar(114, 114, 114));
     return resize_img;
 }
 
 cv::Rect scale_box(cv::Rect box, std::vector<float> &padd)
-{
+{   
+    // remove the padding area
     cv::Rect scaled_box;
     scaled_box.x = box.x - padd[0];
     scaled_box.y = box.y - padd[1];
@@ -79,16 +88,19 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, f
     float x1 = box.x + box.width;
     float y1 = box.y + box.height;
 
+    // scale the bounding boxes to size of origin image
     x0 = x0 / ratio;
     y0 = y0 / ratio;
     x1 = x1 / ratio;
     y1 = y1 / ratio;
 
+    // Clip bounding boxes to image shape
     x0 = std::max(std::min(x0, (float)(raw_w - 1)), 0.f);
     y0 = std::max(std::min(y0, (float)(raw_h - 1)), 0.f);
     x1 = std::max(std::min(x1, (float)(raw_w - 1)), 0.f);
     y1 = std::max(std::min(y1, (float)(raw_h - 1)), 0.f);
 
+    // Draw the bouding boxes and put the label text on the origin image
     cv::rectangle(frame, cv::Point(x0, y0), cv::Point(x1, y1), cv::Scalar(0, 255, 0), 1);
     std::string label = cv::format("%.2f", conf);
     if (!classes.empty())
@@ -104,7 +116,8 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, f
 }
 
 static void generate_proposals(int stride, const float *feat, float prob_threshold, std::vector<Object> &objects)
-{
+{   
+    // get the results from proposals
     float anchors[18] = {12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401};
     int anchor_num = 3;
     int feat_w = 640 / stride;
@@ -118,6 +131,7 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
     if (stride == 32)
         anchor_group = 2;
 
+    // 3 x h x w x (80 + 5)
     for (int anchor = 0; anchor <= anchor_num - 1; anchor++)
     {
         for (int i = 0; i <= feat_h - 1; i++)
@@ -126,6 +140,8 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
             {
                 float box_prob = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 4];
                 box_prob = sigmoid(box_prob);
+
+                // filter the bounding box with low confidence
                 if (box_prob < prob_threshold)
                     continue;
                 float x = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 0];
@@ -135,6 +151,8 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
 
                 double max_prob = 0;
                 int idx = 0;
+
+                // get the class id with maximum confidence
                 for (int t = 5; t < 85; ++t)
                 {
                     double tp = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + t];
@@ -145,10 +163,13 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
                         idx = t;
                     }
                 }
+
+                // filter the class with low confidence
                 float cof = box_prob * max_prob;
                 if (cof < prob_threshold)
                     continue;
-
+                
+                // convert results to xywh
                 x = (sigmoid(x) * 2 - 0.5 + j) * stride;
                 y = (sigmoid(y) * 2 - 0.5 + i) * stride;
                 w = pow(sigmoid(w) * 2, 2) * anchors[anchor_group * 6 + anchor * 2];
@@ -156,6 +177,8 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
 
                 float r_x = x - w / 2;
                 float r_y = y - h / 2;
+
+                // store the results
                 Object obj;
                 obj.rect.x = r_x;
                 obj.rect.y = r_y;
@@ -171,12 +194,12 @@ static void generate_proposals(int stride, const float *feat, float prob_thresho
 
 int main(int argc, char *argv[])
 {
+    // set the hyperparameters
     int img_h = 640;
     int img_w = 640;
     int img_c = 3;
     int img_size = img_h * img_h * img_c;
-    std::vector<float> padd;
-
+    
     const float prob_threshold = 0.30f;
     const float nms_threshold = 0.60f;
 
@@ -186,6 +209,8 @@ int main(int argc, char *argv[])
 
     cv::Mat src_img = cv::imread(image_path);
     cv::Mat img;
+
+    std::vector<float> padd;
     cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
     cv::cvtColor(boxed, img, cv::COLOR_BGR2RGB);
 
@@ -225,7 +250,7 @@ int main(int argc, char *argv[])
     // -------- Step 6. Start inference --------
     infer_request.infer();
 
-    // -------- Step 7. Process output
+    // -------- Step 7. Process output --------
     auto output_tensor_p8 = infer_request.get_output_tensor(0);
     const float *result_p8 = output_tensor_p8.data<const float>();
     auto output_tensor_p16 = infer_request.get_output_tensor(1);
@@ -257,7 +282,9 @@ int main(int argc, char *argv[])
         boxes.push_back(proposals[i].rect);
     }
 
-    std::vector<int> picked;
+    std::vector<int> picked; 
+
+    // do non maximum suppression for each bounding boxx
     cv::dnn::NMSBoxes(boxes, confidences, prob_threshold, nms_threshold, picked);
 
     float raw_h = src_img.rows;
