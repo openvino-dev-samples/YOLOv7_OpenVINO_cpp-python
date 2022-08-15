@@ -30,6 +30,7 @@ Compile the source code
 ```shell
   $ cd cpp
   $ mkdir build && cd build
+  $ source '~/intel/openvino_2022.1.0.643/bin/setupvars.sh'
   $ cmake ..
   $ make
  ```
