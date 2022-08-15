@@ -165,7 +165,7 @@ class YOLOV7_OPENVINO(object):
 
         # Preprocessing
         img = self.letterbox(src_img, self.img_size)
-        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x640x640
         img = np.ascontiguousarray(img)
         img = img.astype(dtype=np.float32)
         img /= 255.0
