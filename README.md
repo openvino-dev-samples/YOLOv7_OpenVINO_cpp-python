@@ -1,6 +1,6 @@
 # YOLOv7_OpenVINO
 This repository will demostrate how to deploy a offical YOLOv7 pre-trained model with OpenVINO runtime api
-## 1 Intall Requirements
+## 1 Install requirements
 ### ***Python***
 ```shell
   $ pip install -r python/requirements
