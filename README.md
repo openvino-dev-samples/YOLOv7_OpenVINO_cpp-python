@@ -3,7 +3,7 @@ This repository will demostrate how to deploy a offical YOLOv7 pre-trained model
 ## 1 Intall Requirements
 ### ***Python***
 ```shell
-  pip install -r requirements
+  $ pip install -r python/requirements
  ```
 
 ### ***C++*** (Ubuntu)
@@ -13,29 +13,29 @@ Pleas follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/op
 
 ## 3 Export the ONNX model
 ```shell
-  git clone git@github.com:WongKinYiu/yolov7.git
-  cd yolov7/models
-  python export.py --weights yolov7.pt
+  $ git clone git@github.com:WongKinYiu/yolov7.git
+  $ cd yolov7/models
+  $ python export.py --weights yolov7.pt
  ```
  
 ## 4 Run inference
- the input image can be found in [YOLOv7's repository](https://github.com/WongKinYiu/yolov7/blob/main/inference/images/horses.jpg)
+ The input image can be found in [YOLOv7's repository](https://github.com/WongKinYiu/yolov7/blob/main/inference/images/horses.jpg)
  ### ***Python***
  ```shell
-  python python/main.py -m yolov7.onnx -i data/horse.jpg
+  $ python python/main.py -m yolov7.onnx -i data/horse.jpg
  ```
 
  ### ***C++*** (Ubuntu)
 Compile the source code
 ```shell
-  cd cpp
-  mkdir build && cd build
-  cmake ..
-  make
+  $ cd cpp
+  $ mkdir build && cd build
+  $ cmake ..
+  $ make
  ```
  Run inference
  ```shell
-  yolov7 yolov7.onnx data/horses.jpg 'CPU'
+  $ yolov7 yolov7.onnx data/horses.jpg 'CPU'
  ```
 ## 5 Results
  
