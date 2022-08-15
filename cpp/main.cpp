@@ -34,7 +34,44 @@ inline float sigmoid(float x)
     return static_cast<float>(1.f / (1.f + exp(-x)));
 }
 
-void drawPred(int classId, float conf, cv::Rect box, float ratio_x, float ratio_y, int raw_h, int raw_w, cv::Mat &frame,
+cv::Mat letterbox(cv::Mat &src, int h, int w, std::vector<float> &padd)
+{
+    int in_w = src.cols;
+    int in_h = src.rows;
+    int tar_w = w;
+    int tar_h = h;
+    float r = min(float(tar_h) / in_h, float(tar_w) / in_w);
+    int inside_w = round(in_w * r);
+    int inside_h = round(in_h * r);
+    int padd_w = tar_w - inside_w;
+    int padd_h = tar_h - inside_h;
+    cv::Mat resize_img;
+    resize(src, resize_img, cv::Size(inside_w, inside_h));
+
+    padd_w = padd_w / 2;
+    padd_h = padd_h / 2;
+    padd.push_back(padd_w);
+    padd.push_back(padd_h);
+    padd.push_back(r);
+    int top = int(round(padd_h - 0.1));
+    int bottom = int(round(padd_h + 0.1));
+    int left = int(round(padd_w - 0.1));
+    int right = int(round(padd_w + 0.1));
+    copyMakeBorder(resize_img, resize_img, top, bottom, left, right, 0, cv::Scalar(114, 114, 114));
+    return resize_img;
+}
+
+cv::Rect scale_box(cv::Rect box, std::vector<float> &padd)
+{
+    cv::Rect scaled_box;
+    scaled_box.x = box.x - padd[0];
+    scaled_box.y = box.y - padd[1];
+    scaled_box.width = box.width;
+    scaled_box.height = box.height;
+    return scaled_box;
+}
+
+void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, float raw_w, cv::Mat &frame,
               const std::vector<std::string> &classes)
 {
     float x0 = box.x;
@@ -42,10 +79,10 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio_x, float ratio_
     float x1 = box.x + box.width;
     float y1 = box.y + box.height;
 
-    x0 = x0 * ratio_x;
-    y0 = y0 * ratio_y;
-    x1 = x1 * ratio_x;
-    y1 = y1 * ratio_y;
+    x0 = x0 / ratio;
+    y0 = y0 / ratio;
+    x1 = x1 / ratio;
+    y1 = y1 / ratio;
 
     x0 = std::max(std::min(x0, (float)(raw_w - 1)), 0.f);
     y0 = std::max(std::min(y0, (float)(raw_h - 1)), 0.f);
@@ -62,8 +99,8 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio_x, float ratio_
     int baseLine;
     cv::Size labelSize = cv::getTextSize(label, cv::FONT_HERSHEY_SIMPLEX, 0.25, 1, &baseLine);
     y0 = max(int(y0), labelSize.height);
-    cv::rectangle(frame, cv::Point(x0, y0 - round(1.5 * labelSize.height)), cv::Point(x0 + round(1.5 * labelSize.width), y0 + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
-    cv::putText(frame, label, cv::Point(x0, y0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1);
+    cv::rectangle(frame, cv::Point(x0, y0 - round(1.5 * labelSize.height)), cv::Point(x0 + round(2 * labelSize.width), y0 + baseLine), cv::Scalar(0, 255, 0), cv::FILLED);
+    cv::putText(frame, label, cv::Point(x0, y0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1.5);
 }
 
 static void generate_proposals(int stride, const float *feat, float prob_threshold, std::vector<Object> &objects)
@@ -138,6 +175,7 @@ int main(int argc, char *argv[])
     int img_w = 640;
     int img_c = 3;
     int img_size = img_h * img_h * img_c;
+    std::vector<float> padd;
 
     const float prob_threshold = 0.30f;
     const float nms_threshold = 0.60f;
@@ -146,10 +184,10 @@ int main(int argc, char *argv[])
     const char *image_path{argv[2]};
     const std::string device_name{argv[3]};
 
-    cv::Mat sample = cv::imread(image_path);
+    cv::Mat src_img = cv::imread(image_path);
     cv::Mat img;
-    cv::resize(sample, img, cv::Size(img_w, img_h));
-    cv::cvtColor(img, img, cv::COLOR_BGR2RGB);
+    cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
+    cv::cvtColor(boxed, img, cv::COLOR_BGR2RGB);
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;
@@ -222,8 +260,8 @@ int main(int argc, char *argv[])
     std::vector<int> picked;
     cv::dnn::NMSBoxes(boxes, confidences, prob_threshold, nms_threshold, picked);
 
-    int raw_h = sample.rows;
-    int raw_w = sample.cols;
+    float raw_h = src_img.rows;
+    float raw_w = src_img.cols;
     float ratio_x = (float)raw_w / img_w;
     float ratio_y = (float)raw_h / img_h;
 
@@ -231,7 +269,8 @@ int main(int argc, char *argv[])
     {
         int idx = picked[i];
         cv::Rect box = boxes[idx];
-        drawPred(classIds[idx], confidences[idx], box, ratio_x, ratio_y, raw_h, raw_w, sample, class_names);
+        cv::Rect scaled_box = scale_box(box, padd);
+        drawPred(classIds[idx], confidences[idx], scaled_box, padd[2], raw_h, raw_w, src_img, class_names);
     }
-    cv::imwrite("yolov7_out.jpg", sample);
+    cv::imwrite("yolov7_out.jpg", src_img);
 }

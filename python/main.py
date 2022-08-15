@@ -149,7 +149,7 @@ class YOLOV7_OPENVINO(object):
             self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=1)
         cv2.namedWindow("dst",0)
         cv2.imshow("dst", img)
-        cv2.imwrite("data/res1.jpg",img)
+        cv2.imwrite("yolov7_out.jpg",img)
         cv2.waitKey(0)
         return 0
 
