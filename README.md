@@ -3,7 +3,7 @@ This repository will demostrate how to deploy a offical YOLOv7 pre-trained model
 ## 1 Install requirements
 ### ***Python***
 ```shell
-  $ pip install -r python/requirements
+  $ pip install -r python/requirements.txt
  ```
 
 ### ***C++*** (Ubuntu)
