@@ -1,4 +1,4 @@
 openvino==2022.1.0
 argparse
 numpy
-opencv-pythoni
+opencv-python
