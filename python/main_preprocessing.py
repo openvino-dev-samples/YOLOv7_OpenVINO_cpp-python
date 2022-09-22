@@ -3,7 +3,8 @@ import cv2
 import argparse
 import numpy as np
 import random
-
+from openvino.preprocess import PrePostProcessor, ColorFormat
+from openvino.runtime import Layout
 
 class YOLOV7_OPENVINO(object):
     def __init__(self, model_path):
@@ -29,6 +30,22 @@ class YOLOV7_OPENVINO(object):
 
         ie = Core()
         self.model = ie.read_model(model_path)
+
+        # Preprocessing API
+        ppp = PrePostProcessor(self.model)
+        # Declare section of desired application's input format
+        ppp.input().tensor() \
+            .set_layout(Layout("NHWC")) \
+            .set_color_format(ColorFormat.BGR)
+        # Here, it is assumed that the model has "NCHW" layout for input.
+        ppp.input().model().set_layout(Layout("NCHW"))
+        # Convert current color format (BGR) to RGB
+        ppp.input().preprocess() \
+            .convert_color(ColorFormat.RGB) \
+            .scale([255.0, 255.0, 255.0])
+        self.model = ppp.build()
+        print(f'Dump preprocessor: {ppp}')
+
         self.compiled_model = ie.compile_model(model=self.model, device_name="CPU")
         self.input_layer = self.compiled_model.input(0)
 
@@ -158,14 +175,12 @@ class YOLOV7_OPENVINO(object):
 
         # Read image
         src_img = cv2.imread(img_path)
-        src_size = src_img.shape[:2]
-
-        # Preprocessing
         img = self.letterbox(src_img, self.img_size)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
+        src_size = src_img.shape[:2]
         img = img.astype(dtype=np.float32)
-        img /= 255.0
-        input_image = np.expand_dims(img.transpose(2, 0, 1), 0) # NHWC to NCHW
+        # img /= 255.0
+        # Preprocessing
+        input_image = np.expand_dims(img, 0)
 
         # Do inference
         pred = self.compiled_model([input_image])
@@ -197,7 +212,7 @@ class YOLOV7_OPENVINO(object):
 
         results = np.concatenate(result, 1)
         boxes, scores, class_ids = self.nms(results, self.conf_thres, self.iou_thres)
-        img_shape = input_image.shape[2:]
+        img_shape = input_image.shape[1:3]
         self.scale_coords(img_shape, src_size, boxes)
 
         # Draw the results

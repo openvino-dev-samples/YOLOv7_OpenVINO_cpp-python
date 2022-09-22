@@ -8,6 +8,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/dnn/dnn.hpp>
 #include <openvino/openvino.hpp>
+#include <openvino/core/preprocess/pre_post_process.hpp>
 
 using namespace std;
 
@@ -208,11 +209,9 @@ int main(int argc, char *argv[])
     const std::string device_name{argv[3]};
 
     cv::Mat src_img = cv::imread(image_path);
-    cv::Mat img;
 
     std::vector<float> padd;
     cv::Mat boxed = letterbox(src_img, img_h, img_w, padd);
-    cv::cvtColor(boxed, img, cv::COLOR_BGR2RGB);
 
     // -------- Step 1. Initialize OpenVINO Runtime Core --------
     ov::Core core;
@@ -220,38 +219,39 @@ int main(int argc, char *argv[])
     // -------- Step 2. Read a model --------
     std::shared_ptr<ov::Model> model = core.read_model(model_path);
 
-    // -------- Step 3. Loading a model to the device --------
+    // -------- Step 3. Preprocessing API--------
+    ov::preprocess::PrePostProcessor prep(model);
+    // Declare section of desired application's input format
+    prep.input().tensor()
+        .set_layout("NHWC")
+        .set_color_format(ov::preprocess::ColorFormat::BGR);
+    // Specify actual model layout
+    prep.input().model()
+        .set_layout("NCHW");
+    // Explicit preprocessing steps. Layout conversion will be done automatically as last step
+    prep.input().preprocess()
+        .convert_color(ov::preprocess::ColorFormat::RGB)
+        .scale({255.0, 255.0, 255.0});
+    // Dump preprocessor
+    std::cout << "Preprocessor: " << prep << std::endl;
+    model = prep.build();
+    // -------- Step 4. Loading a model to the device --------
     ov::CompiledModel compiled_model = core.compile_model(model, device_name);
 
     // Get input port for model with one input
     auto input_port = compiled_model.input();
     // Create tensor from external memory
     // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
-    // -------- Step 4. Create an infer request --------
+    // -------- Step 5. Create an infer request --------
     ov::InferRequest infer_request = compiled_model.create_infer_request();
-
-    // -------- Step 5. Prepare input --------
-    //ov::Tensor input_tensor1 = infer_request.get_input_tensor(0);
-    // NHWC => NCHW
-    float data1[img_h*img_w*3];
-    for (int h = 0; h < img_h; h++)
-    {
-        for (int w = 0; w < img_w; w++)
-        {
-            for (int c = 0; c < 3; c++)
-            {
-                // int in_index = h * img_w * 3 + w * 3 + c;
-                int out_index = c * img_h * img_w + h * img_w + w;
-                data1[out_index] = float(img.at<cv::Vec3b>(h, w)[c]) / 255.0f;
-            }
-        }
-    }
-    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), data1);
+    // -------- Step 6. Set input --------
+    boxed.convertTo(boxed, CV_32FC3);
+    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
     infer_request.set_input_tensor(input_tensor);
-    // -------- Step 6. Start inference --------
+    // -------- Step 7. Start inference --------
     infer_request.infer();
 
-    // -------- Step 7. Process output --------
+    // -------- Step 8. Process output --------
     auto output_tensor_p8 = infer_request.get_output_tensor(0);
     const float *result_p8 = output_tensor_p8.data<const float>();
     auto output_tensor_p16 = infer_request.get_output_tensor(1);
