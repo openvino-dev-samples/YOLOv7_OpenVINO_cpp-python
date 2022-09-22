@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
     // Specify actual model layout
     prep.input().model()
         .set_layout("NCHW");
-    // Explicit preprocessing steps. Layout conversion will be done automatically as last step
+    // Convert current color format (BGR) to RGB
     prep.input().preprocess()
         .convert_color(ov::preprocess::ColorFormat::RGB)
         .scale({255.0, 255.0, 255.0});
@@ -242,8 +242,10 @@ int main(int argc, char *argv[])
     auto input_port = compiled_model.input();
     // Create tensor from external memory
     // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
+    
     // -------- Step 5. Create an infer request --------
     ov::InferRequest infer_request = compiled_model.create_infer_request();
+
     // -------- Step 6. Set input --------
     boxed.convertTo(boxed, CV_32FC3);
     ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);

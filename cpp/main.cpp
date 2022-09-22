@@ -227,6 +227,7 @@ int main(int argc, char *argv[])
     auto input_port = compiled_model.input();
     // Create tensor from external memory
     // ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), input_data.data());
+    
     // -------- Step 4. Create an infer request --------
     ov::InferRequest infer_request = compiled_model.create_infer_request();
 
