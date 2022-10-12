@@ -7,7 +7,7 @@ This repository will demostrate how to deploy a offical YOLOv7 pre-trained model
  ```
 
 ### ***C++*** (Ubuntu)
-Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_linux.html#install-openvino) and [OpenCV](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html)
+Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_from_archive_linux.html) and [OpenCV](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html)
 
 ## 2. Prepare the model
 Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/yolov7)
