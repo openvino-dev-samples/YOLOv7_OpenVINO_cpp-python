@@ -23,11 +23,11 @@ Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/y
  The input image can be found in [YOLOv7's repository](https://github.com/WongKinYiu/yolov7/blob/main/inference/images/horses.jpg)
  ### ***Python***
  ```shell
-  $ python python/main.py -m yolov7.onnx -i data/horse.jpg
+  $ python python/image.py -m yolov7.onnx -i data/horse.jpg -d "CPU" -p False
  ```
  You can also try running the code with [Preprocessing API](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Preprocessing_Overview.html) for performance optimization.
  ```shell
-  $ python python/main_preprocessing.py -m yolov7.onnx -i data/horse.jpg
+  $ python python/image.py -m yolov7.onnx -i data/horse.jpg
  ```
 
  ### ***C++*** (Ubuntu)
@@ -48,3 +48,10 @@ Run inference
 ## 5. Results
  
  ![horse_res](https://user-images.githubusercontent.com/91237924/179361905-44fcd4ac-7a9e-41f0-bd07-b6cf07245c04.jpg)
+
+
+ ## 6. Run with webcam
+ You can also run the sample with webcam for real-time detection
+  ```shell
+  $ python python/webcam.py -m yolov7.onnx -i 0
+ ```

@@ -1,12 +1,13 @@
 from openvino.runtime import Core
 import cv2
-import argparse
 import numpy as np
 import random
-
+import time
+from openvino.preprocess import PrePostProcessor, ColorFormat
+from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 
 class YOLOV7_OPENVINO(object):
-    def __init__(self, model_path):
+    def __init__(self, model_path, device, pre_api, batchsize):
         # set the hyperparameters
         self.classes = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -19,6 +20,7 @@ class YOLOV7_OPENVINO(object):
         "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
         "hair drier", "toothbrush"
        ]
+        self.batchsize = batchsize
         self.img_size = (640, 640) 
         self.conf_thres = 0.1
         self.iou_thres = 0.6
@@ -26,11 +28,35 @@ class YOLOV7_OPENVINO(object):
         self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.classes]
         self.stride = [8, 16, 32]
         self.anchor_list = [[12, 16, 19, 36, 40, 28], [36, 75, 76, 55, 72, 146], [142, 110, 192, 243, 459, 401]]
+        self.anchor = np.array(self.anchor_list).astype(float).reshape(3, -1, 2)
+        area = self.img_size[0] * self.img_size[1]
+        self.size = [int(area / self.stride[0] ** 2), int(area / self.stride[1] ** 2), int(area / self.stride[2] ** 2)]
+        self.feature = [[int(j / self.stride[i]) for j in self.img_size] for i in range(3)]
 
         ie = Core()
         self.model = ie.read_model(model_path)
-        self.compiled_model = ie.compile_model(model=self.model, device_name="CPU")
-        self.input_layer = self.compiled_model.input(0)
+        self.input_layer = self.model.input(0)
+        new_shape = PartialShape([self.batchsize, 3, self.img_size[0], self.img_size[1]])
+        self.model.reshape({self.input_layer.any_name: new_shape})
+        self.pre_api = pre_api
+        if (self.pre_api == True):
+            # Preprocessing API
+            ppp = PrePostProcessor(self.model)
+            # Declare section of desired application's input format
+            ppp.input().tensor() \
+                .set_layout(Layout("NHWC")) \
+                .set_color_format(ColorFormat.BGR)
+            # Here, it is assumed that the model has "NCHW" layout for input.
+            ppp.input().model().set_layout(Layout("NCHW"))
+            # Convert current color format (BGR) to RGB
+            ppp.input().preprocess() \
+                .convert_color(ColorFormat.RGB) \
+                .scale([255.0, 255.0, 255.0])
+            self.model = ppp.build()
+            print(f'Dump preprocessor: {ppp}')
+
+        self.compiled_model = ie.compile_model(model=self.model, device_name=device)
+        self.infer_queue = AsyncInferQueue(self.compiled_model)
 
     def letterbox(self, img, new_shape=(640, 640), color=(114, 114, 114)):
         # Resize and pad image while meeting stride-multiple constraints
@@ -96,7 +122,7 @@ class YOLOV7_OPENVINO(object):
 
         # Apply non-maxima suppression to suppress weak, overlapping bounding boxes
         # indices = nms(boxes, scores, self.iou_threshold)
-        indices = cv2.dnn.NMSBoxes(boxes.tolist(), scores.tolist(), conf_thres, iou_thres).flatten()
+        indices = cv2.dnn.NMSBoxes(boxes.tolist(), scores.tolist(), conf_thres, iou_thres)
 
         return boxes[indices], scores[indices], class_ids[indices]
 
@@ -144,74 +170,102 @@ class YOLOV7_OPENVINO(object):
     
     def draw(self, img, boxinfo):
         for xyxy, conf, cls in boxinfo:
-            #label = f'{names[int(cls)]} {conf:.2f}'
-            #print('xyxy: ', xyxy)
             self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
-        cv2.imwrite("yolov7_out.jpg", img)
+        cv2.imshow('YOLOv7 results', img) 
         return 0
 
-    def infer(self, img_path):
-        anchor = np.array(self.anchor_list).astype(float).reshape(3, -1, 2)
-        area = self.img_size[0] * self.img_size[1]
-        size = [int(area / self.stride[0] ** 2), int(area / self.stride[1] ** 2), int(area / self.stride[2] ** 2)]
-        feature = [[int(j / self.stride[i]) for j in self.img_size] for i in range(3)]
+    def postprocess(self, infer_request, info):
+        src_img_list, src_size = info
+        for batch_id in range(self.batchsize):
+            output = []
+            # Get the each feature map's output data
+            output.append(self.sigmoid(infer_request.get_output_tensor(0).data[batch_id].reshape(-1, self.size[0]*3, 5+self.class_num)))
+            output.append(self.sigmoid(infer_request.get_output_tensor(1).data[batch_id].reshape(-1, self.size[1]*3, 5+self.class_num)))
+            output.append(self.sigmoid(infer_request.get_output_tensor(2).data[batch_id].reshape(-1, self.size[2]*3, 5+self.class_num)))
+            
+            # Postprocessing
+            grid = []
+            for _, f in enumerate(self.feature):
+                grid.append([[i, j] for j in range(f[0]) for i in range(f[1])])
 
+            result = []
+            for i in range(3):
+                src = output[i]
+                xy = src[..., 0:2] * 2. - 0.5
+                wh = (src[..., 2:4] * 2) ** 2
+                dst_xy = []
+                dst_wh = []
+                for j in range(3):
+                    dst_xy.append((xy[:, j * self.size[i]:(j + 1) * self.size[i], :] + grid[i]) * self.stride[i])
+                    dst_wh.append(wh[:, j * self.size[i]:(j + 1) *self.size[i], :] * self.anchor[i][j])
+                src[..., 0:2] = np.concatenate((dst_xy[0], dst_xy[1], dst_xy[2]), axis=1)
+                src[..., 2:4] = np.concatenate((dst_wh[0], dst_wh[1], dst_wh[2]), axis=1)
+                result.append(src)
+
+            results = np.concatenate(result, 1)
+            boxes, scores, class_ids = self.nms(results, self.conf_thres, self.iou_thres)
+            img_shape = self.img_size
+            self.scale_coords(img_shape, src_size, boxes)
+
+            # Draw the results
+            self.draw(src_img_list[batch_id], zip(boxes, scores, class_ids))
+
+    def infer_image(self, img_path):
         # Read image
         src_img = cv2.imread(img_path)
-        src_size = src_img.shape[:2]
-
-        # Preprocessing
+        src_img_list = []
+        src_img_list.append(src_img)
         img = self.letterbox(src_img, self.img_size)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
+        src_size = src_img.shape[:2]
         img = img.astype(dtype=np.float32)
-        img /= 255.0
-        input_image = np.expand_dims(img.transpose(2, 0, 1), 0) # NHWC to NCHW
+        if (self.pre_api == False):
+            img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
+            img /= 255.0
+            img.transpose(2, 0, 1) # NHWC to NCHW
+        input_image = np.expand_dims(img, 0)
 
+        # Set callback function for postprocess
+        self.infer_queue.set_callback(self.postprocess)
         # Do inference
-        pred = self.compiled_model([input_image])
+        self.infer_queue.start_async({self.input_layer.any_name: input_image}, (src_img_list, src_size))
+        self.infer_queue.wait_all()
+        cv2.imwrite("yolov7_out.jpg", src_img_list[0])
 
-        # Get the each feature map's output data
-        output = []
-        output.append(self.sigmoid(pred[self.compiled_model.output(0)].reshape(-1, size[0]*3, 5+self.class_num)))
-        output.append(self.sigmoid(pred[self.compiled_model.output(1)].reshape(-1, size[1]*3, 5+self.class_num)))
-        output.append(self.sigmoid(pred[self.compiled_model.output(2)].reshape(-1, size[2]*3, 5+self.class_num)))
-        
-        # Postprocessing
-        grid = []
-        for _, f in enumerate(feature):
-            grid.append([[i, j] for j in range(f[0]) for i in range(f[1])])
-
-        result = []
-        for i in range(3):
-            src = output[i]
-            xy = src[..., 0:2] * 2. - 0.5
-            wh = (src[..., 2:4] * 2) ** 2
-            dst_xy = []
-            dst_wh = []
-            for j in range(3):
-                dst_xy.append((xy[:, j * size[i]:(j + 1) * size[i], :] + grid[i]) * self.stride[i])
-                dst_wh.append(wh[:, j * size[i]:(j + 1) *size[i], :] * anchor[i][j])
-            src[..., 0:2] = np.concatenate((dst_xy[0], dst_xy[1], dst_xy[2]), axis=1)
-            src[..., 2:4] = np.concatenate((dst_wh[0], dst_wh[1], dst_wh[2]), axis=1)
-            result.append(src)
-
-        results = np.concatenate(result, 1)
-        boxes, scores, class_ids = self.nms(results, self.conf_thres, self.iou_thres)
-        img_shape = input_image.shape[2:]
-        self.scale_coords(img_shape, src_size, boxes)
-
-        # Draw the results
-        self.draw(src_img, zip(boxes, scores, class_ids))
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(add_help=False)
-    args = parser.add_argument_group('Options')
-    args.add_argument('-h', '--help', action='help', help='Show this help message and exit.')
-    args.add_argument('-i', '--input', required=True, type=str,
-                      help='Required. Path to an image file.')
-    args.add_argument('-m', '--model', required=True, type=str,
-                      help='Required. Path to an .xml or .onnx file with a trained model.')
-    args = parser.parse_args()
-    yolov7_detector=YOLOV7_OPENVINO(args.model)
-    yolov7_detector.infer(args.input)
+    def infer_cam(self, source):
+        # Set callback function for postprocess
+        self.infer_queue.set_callback(self.postprocess)
+        # Capture camera source
+        cap = cv2.VideoCapture(source)
+        src_img_list = []
+        img_list = []
+        count = 0
+        start_time = time.time()
+        while(cap.isOpened()): 
+            _, frame = cap.read() 
+            img = self.letterbox(frame, self.img_size)
+            src_size = frame.shape[:2]
+            img = img.astype(dtype=np.float32)
+            # Preprocessing
+            input_image = np.expand_dims(img, 0)
+            # Batching
+            img_list.append(input_image)
+            src_img_list.append(frame)
+            if (len(img_list) < self.batchsize):
+                continue
+            img_batch = np.concatenate(img_list)
+            
+            # Do inference
+            self.infer_queue.start_async({self.input_layer.any_name: img_batch}, (src_img_list, src_size))
+            src_img_list = []
+            img_list = []
+            count = count + self.batchsize
+            c = cv2.waitKey(1) 
+            if c==27: 
+                self.infer_queue.wait_all()
+                break 
+        cap.release() 
+        cv2.destroyAllWindows() 
+        end_time = time.time()
+        # Calculate the average FPS\n",
+        fps = count / (end_time - start_time)
+        print("throughput: {:.2f} fps".format(fps))
