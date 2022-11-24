@@ -171,7 +171,7 @@ class YOLOV7_OPENVINO(object):
     def draw(self, img, boxinfo):
         for xyxy, conf, cls in boxinfo:
             self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
-        cv2.imshow('YOLOv7 results', img) 
+        cv2.imshow('Press ESC to Exit', img) 
         cv2.waitKey(1)
 
     def postprocess(self, infer_request, info):
