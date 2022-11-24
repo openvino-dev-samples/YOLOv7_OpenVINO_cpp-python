@@ -56,4 +56,4 @@ Run inference
   $ python python/webcam.py -m yolov7.onnx -i 0
  ```
  
-Tips: you can switch the device name to **"GPU"** to boost the performance.
+Tips: you can switch the device name to **"GPU"** to improve the performance.
