@@ -58,5 +58,5 @@ Run inference
  
 Tips: you can switch the device name to **"GPU"** to improve the performance.
 
-## 6. Further optimization
+## 7. Further optimization
 Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/225-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
