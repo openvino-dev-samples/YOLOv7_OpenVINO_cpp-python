@@ -172,7 +172,7 @@ class YOLOV7_OPENVINO(object):
         for xyxy, conf, cls in boxinfo:
             self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
         cv2.imshow('YOLOv7 results', img) 
-        return 0
+        cv2.waitKey(1)
 
     def postprocess(self, infer_request, info):
         src_img_list, src_size = info

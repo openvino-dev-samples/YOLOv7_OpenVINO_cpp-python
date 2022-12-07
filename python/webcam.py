@@ -1,6 +1,8 @@
 import yolov7
 import argparse
 
+# py -3.7 webcam.py -i 0 -m .\model\yolov7.onnx
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
     args = parser.add_argument_group('Options')

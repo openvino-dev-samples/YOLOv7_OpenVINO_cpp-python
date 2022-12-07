@@ -8,6 +8,8 @@ import utils
 from flask import Flask
 import threading, time
 
+# py -3.9 main_iot.py -m ./model/yolov7.onnx
+
 
 class YOLOV7_OPENVINO(object):
     def __init__(self, model_path):
@@ -95,7 +97,7 @@ class YOLOV7_OPENVINO(object):
             "toothbrush",
         ]
         self.img_size = (640, 640)
-        self.conf_thres = 0.5
+        self.conf_thres = args.conf
         self.iou_thres = 0.6
         self.class_num = 80
         self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.classes]
@@ -176,10 +178,15 @@ class YOLOV7_OPENVINO(object):
 
         # Apply non-maxima suppression to suppress weak, overlapping bounding boxes
         # indices = nms(boxes, scores, self.iou_threshold)
+        
+
         indices = cv2.dnn.NMSBoxes(
             boxes.tolist(), scores.tolist(), conf_thres, iou_thres
-        ).flatten()
+        )
 
+        if len(indices) > 0:
+            indices = indices.flatten()
+            
         return boxes[indices], scores[indices], class_ids[indices]
 
     def clip_coords(self, boxes, img_shape):
@@ -402,6 +409,15 @@ if __name__ == "__main__":
         required=True,
         type=str,
         help="Required. Path to an .xml or .onnx file with a trained model.",
+    )
+
+    args.add_argument(
+        "-c",
+        "--conf",
+        required=False,
+        type=float,
+        default=0.5,
+        help="set confidence in predictions",
     )
     
     args.add_argument('--use-flask', default=True, action='store_true')
