@@ -7,7 +7,7 @@ from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 
 class YOLOV7_OPENVINO(object):
-    def __init__(self, model_path, device, pre_api, batchsize):
+    def __init__(self, model_path, device, pre_api, batchsize, nireq):
         # set the hyperparameters
         self.classes = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -56,7 +56,7 @@ class YOLOV7_OPENVINO(object):
             print(f'Dump preprocessor: {ppp}')
 
         self.compiled_model = ie.compile_model(model=self.model, device_name=device)
-        self.infer_queue = AsyncInferQueue(self.compiled_model)
+        self.infer_queue = AsyncInferQueue(self.compiled_model, nireq)
 
     def letterbox(self, img, new_shape=(640, 640), color=(114, 114, 114)):
         # Resize and pad image while meeting stride-multiple constraints
