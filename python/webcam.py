@@ -15,6 +15,8 @@ if __name__ == "__main__":
                       help='Device name.')
     args.add_argument('-bs', '--batchsize', required=False, default=1, type=int,
                       help='Batch size.')
+    args.add_argument('-n', '--nir', required=False, default=1, type=int,
+                      help='number of infer request.')
     args = parser.parse_args()
-    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize)
+    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize, args.nir)
     yolov7_detector.infer_cam(args.input)
