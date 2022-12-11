@@ -1,7 +1,8 @@
 import yolov7
 import argparse
+import webapp_utils
 
-# py -3.7 webcam.py -i 0 -m .\model\yolov7.onnx
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(add_help=False)
@@ -17,6 +18,13 @@ if __name__ == "__main__":
                       help='Device name.')
     args.add_argument('-bs', '--batchsize', required=False, default=1, type=int,
                       help='Batch size.')
+    args.add_argument('-n', '--nireq', required=False, default=2, type=int,
+                      help='number of infer request.')
+    
+    args.add_argument('--use-flask', default=False, action='store_true')
+    args.add_argument('--no-flask', dest='use-flask', action='store_false')
+    
     args = parser.parse_args()
-    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize)
+    
+    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize, args.nireq, args.use_flask)
     yolov7_detector.infer_cam(args.input)

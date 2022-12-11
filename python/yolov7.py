@@ -6,8 +6,13 @@ import time
 from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 
+# IoT packages
+import webapp_utils
+from flask import Flask
+import threading, time
+
 class YOLOV7_OPENVINO(object):
-    def __init__(self, model_path, device, pre_api, batchsize):
+    def __init__(self, model_path, device, pre_api, batchsize, nireq, use_flask):
         # set the hyperparameters
         self.classes = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -21,6 +26,8 @@ class YOLOV7_OPENVINO(object):
         "hair drier", "toothbrush"
        ]
         self.batchsize = batchsize
+        self.use_flask = use_flask
+        self.routes = webapp_utils.WebAppUtils()
         self.img_size = (640, 640) 
         self.conf_thres = 0.1
         self.iou_thres = 0.6
@@ -56,7 +63,7 @@ class YOLOV7_OPENVINO(object):
             print(f'Dump preprocessor: {ppp}')
 
         self.compiled_model = ie.compile_model(model=self.model, device_name=device)
-        self.infer_queue = AsyncInferQueue(self.compiled_model)
+        self.infer_queue = AsyncInferQueue(self.compiled_model, nireq)
 
     def letterbox(self, img, new_shape=(640, 640), color=(114, 114, 114)):
         # Resize and pad image while meeting stride-multiple constraints
@@ -169,10 +176,58 @@ class YOLOV7_OPENVINO(object):
                         [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
     
     def draw(self, img, boxinfo):
-        for xyxy, conf, cls in boxinfo:
-            self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
-        cv2.imshow('YOLOv7 results', img) 
-        cv2.waitKey(1)
+        
+        if not self.use_flask:
+            for xyxy, conf, cls in boxinfo:
+                self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
+            cv2.imshow('Press ESC to Exit', img) 
+            cv2.waitKey(1)
+        
+        else:        
+            people = 0
+            for xyxy, conf, cls in boxinfo:
+                conf = round(conf,5)
+                
+                if cls == 0: # if person
+                    self.plot_one_box(xyxy, 
+                                      img, 
+                                      label=self.classes[int(cls)], 
+                                      color=self.colors[int(cls)], 
+                                      line_thickness=2)
+                    
+                    people += 1
+
+            image = self.insert_people_count(img, people)
+            
+            # web app for IoT
+            self.routes.net_people_count = people
+            self.routes.framecopy = image
+
+    # text gets garbled with out this deep copy
+    def insert_people_count(self,image, people):
+        
+        cv2.putText(
+            image, 
+            f"People: {people}", 
+            (1, 25), 
+            cv2.FONT_HERSHEY_SIMPLEX, 
+            0.8, 
+            (0, 0, 0), 
+            1
+        )
+
+        cv2.putText(
+            image,
+            f"Fps: {str(round(self.routes.current_fps, 2))}",
+            (1, 50),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.8,
+            (0, 0, 0),
+            1
+        )
+
+        return image
+            
 
     def postprocess(self, infer_request, info):
         src_img_list, src_size = info
@@ -240,6 +295,25 @@ class YOLOV7_OPENVINO(object):
         img_list = []
         count = 0
         start_time = time.time()
+        
+        print("Web app for IoT enabled is: ",self.use_flask)
+        if self.use_flask:
+            flask_app = Flask(__name__)
+            app = webapp_utils.FlaskAppWrapper(flask_app)
+            
+            app.add_endpoint('/favicon.ico/', 'favicon', self.routes.favicon)
+            app.add_endpoint('/people-count/', 'get_people', self.routes.get_people)
+            app.add_endpoint('/fps/', 'get_fps', self.routes.get_fps)
+            app.add_endpoint('/video-feed/', 'video_feed', self.routes.video_feed)
+            app.add_endpoint('/', 'index', self.routes.index)
+
+            threaded_flask_app = threading.Thread(target=lambda: app.run(
+                host='0.0.0.0', port=5000, use_reloader=False))
+            
+            threaded_flask_app.setDaemon(True)
+            threaded_flask_app.start()
+        
+        
         while(cap.isOpened()): 
             _, frame = cap.read() 
             img = self.letterbox(frame, self.img_size)
@@ -253,19 +327,30 @@ class YOLOV7_OPENVINO(object):
             if (len(img_list) < self.batchsize):
                 continue
             img_batch = np.concatenate(img_list)
-            
+                
             # Do inference
             self.infer_queue.start_async({self.input_layer.any_name: img_batch}, (src_img_list, src_size))
             src_img_list = []
             img_list = []
             count = count + self.batchsize
-            c = cv2.waitKey(1) 
+            c = cv2.waitKey(1)
+            
+            if self.use_flask:            
+                current_time = time.time()
+                current_fps_calc = count / (current_time - start_time)
+                self.routes.current_fps = round(current_fps_calc, 4)
+            
             if c==27: 
                 self.infer_queue.wait_all()
                 break 
+            
         cap.release() 
         cv2.destroyAllWindows() 
         end_time = time.time()
         # Calculate the average FPS\n",
         fps = count / (end_time - start_time)
         print("throughput: {:.2f} fps".format(fps))
+        
+        if self.use_flask:
+            print("Killing use_flask App Thread")
+            exit(0)    
