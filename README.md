@@ -71,3 +71,8 @@ The web app also contains a rest endpoint for people and video frame rate which 
 * FPS rest API GET request: `http://localhost:5000/fps/` to log data from external IoT platform
 * Future testing to include MQTT if desired
 
+## 5. Remote Deployment IoT Results Viewed In Browser
+ 
+ ![iot_res](/data/iot_screenshot.PNG)
+
+
