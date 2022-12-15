@@ -187,14 +187,13 @@ class YOLOV7_OPENVINO(object):
             people = 0
             for xyxy, conf, cls in boxinfo:
                 conf = round(conf,5)
-                
-                self.plot_one_box(xyxy, 
-                                    img, 
-                                    label=self.classes[int(cls)], 
-                                    color=self.colors[int(cls)], 
-                                    line_thickness=2)
-                            
-                if cls == 0: # for IoT                 
+                     
+                if cls == 0: # for IoT only box people
+                    self.plot_one_box(xyxy, 
+                                        img, 
+                                        label=self.classes[int(cls)], 
+                                        color=self.colors[int(cls)], 
+                                        line_thickness=2)
                     people += 1
   
             # web app for IoT
