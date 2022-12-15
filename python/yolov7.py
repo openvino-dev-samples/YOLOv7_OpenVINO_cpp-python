@@ -188,45 +188,19 @@ class YOLOV7_OPENVINO(object):
             for xyxy, conf, cls in boxinfo:
                 conf = round(conf,5)
                 
-                if cls == 0: # if person
-                    self.plot_one_box(xyxy, 
-                                      img, 
-                                      label=self.classes[int(cls)], 
-                                      color=self.colors[int(cls)], 
-                                      line_thickness=2)
-                    
+                self.plot_one_box(xyxy, 
+                                    img, 
+                                    label=self.classes[int(cls)], 
+                                    color=self.colors[int(cls)], 
+                                    line_thickness=2)
+                            
+                if cls == 0: # for IoT                 
                     people += 1
-
-            image = self.insert_people_count(img, people)
-            
+  
             # web app for IoT
             self.routes.net_people_count = people
-            self.routes.framecopy = image
+            self.routes.framecopy = img
 
-    # text gets garbled with out this deep copy
-    def insert_people_count(self,image, people):
-        
-        cv2.putText(
-            image, 
-            f"People: {people}", 
-            (1, 25), 
-            cv2.FONT_HERSHEY_SIMPLEX, 
-            0.8, 
-            (0, 0, 0), 
-            1
-        )
-
-        cv2.putText(
-            image,
-            f"Fps: {str(round(self.routes.current_fps, 2))}",
-            (1, 50),
-            cv2.FONT_HERSHEY_SIMPLEX,
-            0.8,
-            (0, 0, 0),
-            1
-        )
-
-        return image
             
 
     def postprocess(self, infer_request, info):
@@ -338,7 +312,7 @@ class YOLOV7_OPENVINO(object):
             if self.use_flask:            
                 current_time = time.time()
                 current_fps_calc = count / (current_time - start_time)
-                self.routes.current_fps = round(current_fps_calc, 4)
+                self.routes.current_fps = round(current_fps_calc, 3)
             
             if c==27: 
                 self.infer_queue.wait_all()

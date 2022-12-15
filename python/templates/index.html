@@ -1,24 +1,156 @@
 <!doctype html>
 <html lang="en">
+
 <head>
-    <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-
-    <!-- Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.3/css/bootstrap.min.css"
-          integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO" crossorigin="anonymous">
-
-    <title>Live Streaming Demonstration</title>
+    <title>YoloV7 IoT Live Stream</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js">
+</script>
+
+<script type="text/javascript">
+    var $SCRIPT_ROOT = {{ request.script_root| tojson | safe }};
+</script>
+
+<script type="text/javascript">
+    var intervalID = setInterval(update_values, 1000);
+
+    function update_values() {
+        $.getJSON($SCRIPT_ROOT + '/fps',
+
+            function (data) {
+                $('#fpsdata').text(data);
+                console.log(data)
+            });
+
+    };
+
+    function stopTextColor() {
+        clearInterval(intervalID);
+    }
+
+</script>
+<script type="text/javascript">
+    var intervalID = setInterval(update_values, 1000);
+
+    function update_values() {
+        $.getJSON($SCRIPT_ROOT + '/people-count',
+
+            function (data) {
+                $('#people').text(data);
+                console.log(data)
+            });
+
+    };
+
+    function stopTextColor() {
+        clearInterval(intervalID);
+    }
+
+</script>
+<style>
+    @import url('http://fonts.cdnfonts.com/css/sf-pro-display');
+</style>
+
+<style>
+    @import url('http://fonts.cdnfonts.com/css/sf-pro-display');
+</style>
+
 <body>
-<div class="container">
-    <div class="row">
-        <div class="col-lg-8  offset-lg-2">
-            <h3 class="mt-5">Live Streaming</h3>
-            <img src="{{ url_for('video_feed') }}" width="100%">
+    <div id="section-header" data-section-id="header">
+        <style>
+            .header {
+
+                background-color: #9495A0;
+
+                font-size: 18px;
+            }
+        </style>
+
+        <div class="hidden">
+        </div>
+
+        <header class="header header--static    background-dark header--close-on-scroll"
+            kjb-settings-id="sections_header_settings_background_color">
+            <div class="hello-bars">
+            </div>
+            <div class="header__wrap">
+                <div class="header__content header__content--desktop background-dark">
+                    <div class="container header__container media justify-content-left">
+                        <div id="block-1555988494486"
+                            class="header__block header__block--logo header__block--show header__switch-content "
+                            kjb-settings-id="sections_header_blocks_1555988494486_settings_stretch">
+                            <style>
+                                #block-1555988494486 {
+                                    line-height: 1;
+                                }
+
+                                #block-1555988494486 .logo__image {
+                                    display: block;
+                                    width: 200px;
+                                }
+                            </style>
+
+                            <a class="logo"
+                                href="https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html">
+                                <img class="logo__image"
+                                    src="https://www.intel.com/content/dam/www/central-libraries/us/en/images/logo-openvino-1x1.png"
+                                    kjb-settings-id="sections_header_blocks_1555988494486_settings_logo"
+                                    alt="Header Logo">
+                            </a>
+                        </div>
+                    </div>
+                </div>
+        </header>
+    </div>
+    <div class="container" style="font-family: 'SF Pro Display', sans-serif;">
+        <div class="row ">
+            <div class="col-sm " style=" border: 5px ;">
+                <div>
+                    <h2 style="font-weight: 900;">YOLOv7 &nbsp; Flask &nbsp; Dashboard</h2>
+                </div>
+                <div>
+                    <img src="{{ url_for('video_feed') }}"
+                        style="width: auto;height: auto; border-radius: 35px;max-width: 500px;max-height: 500px; object-fit: contain;">
+                </div>
+            </div>
+            <div class="col-sm">
+                <div class="flex-column">
+
+                    <div style="margin-top: 60px;">
+                        <div class="btn btn-dark" style="width: 100px; border-radius: 15px;">
+                            <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
+                                <span id="people">?</span>
+                            </div>
+
+                            <script>
+                                document.getElementById("people").innerHTML;
+                            </script>
+                            <div style="font-weight: bold;">People</div>
+                        </div>
+                        <b style="font-size: 1.2rem;line-height: 1.5;">People Detected In Frame</b>
+                    </div>
+
+                    <div style="margin-top: 10px;">
+                        <div class="btn btn-dark" style="width: 100px;border-radius: 15px;">
+
+                            <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
+                                <span id="fpsdata">?</span>
+                            </div>
+
+                            <script>
+                                document.getElementById("fpsdata").innerHTML;
+                            </script>
+                            <div style="font-weight: bold;">FPS</div>
+
+                        </div>
+                        <b style="font-size: 1.2rem;line-height: 1.5;">Frame Rate Per Second</b>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 </body>
+
 </html>
