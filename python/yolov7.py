@@ -12,7 +12,7 @@ from flask import Flask
 import threading, time
 
 class YOLOV7_OPENVINO(object):
-    def __init__(self, model_path, device, pre_api, batchsize, nireq, use_flask):
+    def __init__(self, model_path, device, pre_api, batchsize, nireq, conf, use_flask):
         # set the hyperparameters
         self.classes = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -29,7 +29,7 @@ class YOLOV7_OPENVINO(object):
         self.use_flask = use_flask
         self.routes = webapp_utils.WebAppUtils()
         self.img_size = (640, 640) 
-        self.conf_thres = 0.1
+        self.conf_thres = conf
         self.iou_thres = 0.6
         self.class_num = 80
         self.colors = [[random.randint(0, 255) for _ in range(3)] for _ in self.classes]

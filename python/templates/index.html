@@ -6,8 +6,11 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
 </head>
-<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js">
-</script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/luxon@3.0.4/build/global/luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-luxon@1.2.0/dist/chartjs-adapter-luxon.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-streaming@2.0.0/dist/chartjs-plugin-streaming.min.js"></script>
 
 <script type="text/javascript">
     var $SCRIPT_ROOT = {{ request.script_root| tojson | safe }};
@@ -31,24 +34,7 @@
     }
 
 </script>
-<script type="text/javascript">
-    var intervalID = setInterval(update_values, 1000);
 
-    function update_values() {
-        $.getJSON($SCRIPT_ROOT + '/people-count',
-
-            function (data) {
-                $('#people').text(data);
-                console.log(data)
-            });
-
-    };
-
-    function stopTextColor() {
-        clearInterval(intervalID);
-    }
-
-</script>
 <style>
     @import url('http://fonts.cdnfonts.com/css/sf-pro-display');
 </style>
@@ -58,52 +44,6 @@
 </style>
 
 <body>
-    <div id="section-header" data-section-id="header">
-        <style>
-            .header {
-
-                background-color: #9495A0;
-
-                font-size: 18px;
-            }
-        </style>
-
-        <div class="hidden">
-        </div>
-
-        <header class="header header--static    background-dark header--close-on-scroll"
-            kjb-settings-id="sections_header_settings_background_color">
-            <div class="hello-bars">
-            </div>
-            <div class="header__wrap">
-                <div class="header__content header__content--desktop background-dark">
-                    <div class="container header__container media justify-content-left">
-                        <div id="block-1555988494486"
-                            class="header__block header__block--logo header__block--show header__switch-content "
-                            kjb-settings-id="sections_header_blocks_1555988494486_settings_stretch">
-                            <style>
-                                #block-1555988494486 {
-                                    line-height: 1;
-                                }
-
-                                #block-1555988494486 .logo__image {
-                                    display: block;
-                                    width: 200px;
-                                }
-                            </style>
-
-                            <a class="logo"
-                                href="https://www.intel.com/content/www/us/en/developer/tools/openvino-toolkit/overview.html">
-                                <img class="logo__image"
-                                    src="https://www.intel.com/content/dam/www/central-libraries/us/en/images/logo-openvino-1x1.png"
-                                    kjb-settings-id="sections_header_blocks_1555988494486_settings_logo"
-                                    alt="Header Logo">
-                            </a>
-                        </div>
-                    </div>
-                </div>
-        </header>
-    </div>
     <div class="container" style="font-family: 'SF Pro Display', sans-serif;">
         <div class="row ">
             <div class="col-sm " style=" border: 5px ;">
@@ -112,45 +52,140 @@
                 </div>
                 <div>
                     <img src="{{ url_for('video_feed') }}"
-                        style="width: auto;height: auto; border-radius: 35px;max-width: 500px;max-height: 500px; object-fit: contain;">
+                        style="width: auto;height: auto; border-radius: 35px;max-width: 100%;max-height: 30%; object-fit: contain;">
                 </div>
             </div>
             <div class="col-sm">
-                <div class="flex-column">
+                <canvas id="myChart" class="chartBox"></canvas>
+            </div>
+        </div>
+        <div class="col-sm">
+            <div class="flex-column">
 
-                    <div style="margin-top: 60px;">
-                        <div class="btn btn-dark" style="width: 100px; border-radius: 15px;">
-                            <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
-                                <span id="people">?</span>
-                            </div>
-
-                            <script>
-                                document.getElementById("people").innerHTML;
-                            </script>
-                            <div style="font-weight: bold;">People</div>
+                <div style="margin-top: 60px;">
+                    <div class="btn btn-dark" style="width: 100px; border-radius: 15px;">
+                        <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
+                            <span id="detectCount">?</span>
                         </div>
-                        <b style="font-size: 1.2rem;line-height: 1.5;">People Detected In Frame</b>
+
+                        <script>
+                            document.getElementById("detectCount").innerHTML;
+                        </script>
+                        <div style="font-weight: bold;">People</div>
                     </div>
+                    <b style="font-size: 1.2rem;line-height: 1.5;">People Detected In Frame</b>
+                </div>
 
-                    <div style="margin-top: 10px;">
-                        <div class="btn btn-dark" style="width: 100px;border-radius: 15px;">
+                <div style="margin-top: 10px;">
+                    <div class="btn btn-dark" style="width: 100px;border-radius: 15px;">
 
-                            <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
-                                <span id="fpsdata">?</span>
-                            </div>
-
-                            <script>
-                                document.getElementById("fpsdata").innerHTML;
-                            </script>
-                            <div style="font-weight: bold;">FPS</div>
-
+                        <div style="font-weight: 900;font-size: x-large;line-height: 1.5;">
+                            <span id="fpsdata">?</span>
                         </div>
-                        <b style="font-size: 1.2rem;line-height: 1.5;">Frame Rate Per Second</b>
+
+                        <script>
+                            document.getElementById("fpsdata").innerHTML;
+                        </script>
+                        <div style="font-weight: bold;">FPS</div>
+
                     </div>
+                    <b style="font-size: 1.2rem;line-height: 1.5;">Frame Rate Per Second</b>
                 </div>
             </div>
         </div>
-    </div>
+        <script>
+            var detect_1 = 0;
+            var intervalID = setInterval(update_values, 1000);
+
+            function update_values() {
+                $.getJSON($SCRIPT_ROOT + '/people-count',
+
+                    function (data) {
+                        $('#detectCount').text(data);
+                        detect_1 = parseInt(data, 10);
+                        console.log(detect_1)
+                    });
+
+            };
+
+
+
+            function stopTextColor() {
+                clearInterval(intervalID);
+            }
+
+
+
+            const data = {
+                labels: [],
+                datasets: [{
+                    label: 'Person Detected',
+                    data: [],
+                    backgroundColor: 'rgba(136,118,254,0.3)',
+                    borderColor: 'rgba(136,118,254,0.7)',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointHitRadius: 5,
+                    pointRadius: 5,
+                    pointHoverRadius: 7,
+                    pointHoverBorderColor: `rgba(0,0,0, 0.7)`,
+                    pointHoverBackgroundColor: `rgba(0,0,0, 0.5)`,
+                    pointBorderColor: `rgba(136,118,254,1)`,
+                    hoverBorderColor: `rgba(136,118,254,1)`
+                }]
+
+            };
+
+            const config = {
+                type: 'line',
+                data,
+                options: {
+                    bezierCurve: true,
+                    scales: {
+                        x: {
+
+                            type: 'realtime',
+                            grid: {
+                                display: false
+                            },
+                            realtime: {
+                                duration: 10000000,
+                                refresh: 100000,
+                                delay: 100,
+                                onRefresh: chart => {
+                                    chart.data.datasets.forEach(dataset => {
+                                        dataset.data.push({
+                                            x: Date.now(),
+                                            y: detect_1
+                                        });
+                                    });
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            // grid:{
+                            //   display: false
+                            // },
+                            ticks: {
+                                stepSize: 1,
+                                font: {
+                                    size: 16,
+                                    weight: "bold"
+                                }
+                            }
+                        },
+
+                    }
+                }
+            };
+
+            const myChart = new Chart(
+                document.getElementById('myChart'),
+                config
+            );
+        </script>
+
 </body>
 
 </html>
