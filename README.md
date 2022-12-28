@@ -76,3 +76,10 @@ The web app also contains a rest endpoint for people and video frame rate which 
  ![iot_res](/data/iot_screenshot.PNG)
 
 
+=======
+Tips: you can switch the device name to **"GPU"** to improve the performance.
+
+## 9. Further optimization
+Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
+
+
