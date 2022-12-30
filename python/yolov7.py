@@ -7,7 +7,7 @@ from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 
 class YOLOV7_OPENVINO(object):
-    def __init__(self, model_path, device, pre_api, batchsize, nireq):
+    def __init__(self, model_path, device, pre_api, batchsize, nireq, grid):
         # set the hyperparameters
         self.classes = [
         "person", "bicycle", "car", "motorcycle", "airplane", "bus", "train", "truck", "boat", "traffic light",
@@ -21,6 +21,7 @@ class YOLOV7_OPENVINO(object):
         "hair drier", "toothbrush"
        ]
         self.batchsize = batchsize
+        self.grid = grid
         self.img_size = (640, 640) 
         self.conf_thres = 0.1
         self.iou_thres = 0.6
@@ -177,32 +178,35 @@ class YOLOV7_OPENVINO(object):
     def postprocess(self, infer_request, info):
         src_img_list, src_size = info
         for batch_id in range(self.batchsize):
-            output = []
-            # Get the each feature map's output data
-            output.append(self.sigmoid(infer_request.get_output_tensor(0).data[batch_id].reshape(-1, self.size[0]*3, 5+self.class_num)))
-            output.append(self.sigmoid(infer_request.get_output_tensor(1).data[batch_id].reshape(-1, self.size[1]*3, 5+self.class_num)))
-            output.append(self.sigmoid(infer_request.get_output_tensor(2).data[batch_id].reshape(-1, self.size[2]*3, 5+self.class_num)))
-            
-            # Postprocessing
-            grid = []
-            for _, f in enumerate(self.feature):
-                grid.append([[i, j] for j in range(f[0]) for i in range(f[1])])
+            if self.grid:
+                results = np.expand_dims(infer_request.get_output_tensor(0).data[batch_id], axis=0)
+            else:
+                output = []
+                # Get the each feature map's output data
+                output.append(self.sigmoid(infer_request.get_output_tensor(0).data[batch_id].reshape(-1, self.size[0]*3, 5+self.class_num)))
+                output.append(self.sigmoid(infer_request.get_output_tensor(1).data[batch_id].reshape(-1, self.size[1]*3, 5+self.class_num)))
+                output.append(self.sigmoid(infer_request.get_output_tensor(2).data[batch_id].reshape(-1, self.size[2]*3, 5+self.class_num)))
+                
+                # Postprocessing
+                grid = []
+                for _, f in enumerate(self.feature):
+                    grid.append([[i, j] for j in range(f[0]) for i in range(f[1])])
 
-            result = []
-            for i in range(3):
-                src = output[i]
-                xy = src[..., 0:2] * 2. - 0.5
-                wh = (src[..., 2:4] * 2) ** 2
-                dst_xy = []
-                dst_wh = []
-                for j in range(3):
-                    dst_xy.append((xy[:, j * self.size[i]:(j + 1) * self.size[i], :] + grid[i]) * self.stride[i])
-                    dst_wh.append(wh[:, j * self.size[i]:(j + 1) *self.size[i], :] * self.anchor[i][j])
-                src[..., 0:2] = np.concatenate((dst_xy[0], dst_xy[1], dst_xy[2]), axis=1)
-                src[..., 2:4] = np.concatenate((dst_wh[0], dst_wh[1], dst_wh[2]), axis=1)
-                result.append(src)
-
-            results = np.concatenate(result, 1)
+                result = []
+                for i in range(3):
+                    src = output[i]
+                    xy = src[..., 0:2] * 2. - 0.5
+                    wh = (src[..., 2:4] * 2) ** 2
+                    dst_xy = []
+                    dst_wh = []
+                    for j in range(3):
+                        dst_xy.append((xy[:, j * self.size[i]:(j + 1) * self.size[i], :] + grid[i]) * self.stride[i])
+                        dst_wh.append(wh[:, j * self.size[i]:(j + 1) *self.size[i], :] * self.anchor[i][j])
+                    src[..., 0:2] = np.concatenate((dst_xy[0], dst_xy[1], dst_xy[2]), axis=1)
+                    src[..., 2:4] = np.concatenate((dst_wh[0], dst_wh[1], dst_wh[2]), axis=1)
+                    result.append(src)
+                results = np.concatenate(result, 1)
+                
             boxes, scores, class_ids = self.nms(results, self.conf_thres, self.iou_thres)
             img_shape = self.img_size
             self.scale_coords(img_shape, src_size, boxes)

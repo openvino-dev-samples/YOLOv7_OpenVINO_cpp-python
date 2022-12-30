@@ -30,6 +30,14 @@ Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/y
   $ python python/image.py -m yolov7.onnx -i data/horse.jpg
  ```
 
+- -i = path to image or video source;
+- -m = Path to IR .xml or .onnx file;
+- -d = Device name, e.g "CPU";
+- -p = use preprocessing api, True or False
+- -bs = Batch size;
+- -n = number of infer requests;
+- -g = with/without grid in model, True or False;
+  
  ### ***C++*** (Ubuntu)
 Compile the source code
 ```shell

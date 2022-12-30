@@ -17,6 +17,9 @@ if __name__ == "__main__":
                       help='Batch size.')
     args.add_argument('-n', '--nireq', required=False, default=2, type=int,
                       help='number of infer request.')
+    args.add_argument('-g', '--grid', required=False, default=False, type=bool,
+                      help='with Grid in model.')
+    
     args = parser.parse_args()
-    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize, args.nireq)
+    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, args.batchsize, args.nireq, args.grid)
     yolov7_detector.infer_cam(args.input)
