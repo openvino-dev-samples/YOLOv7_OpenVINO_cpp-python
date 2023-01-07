@@ -225,7 +225,7 @@ class YOLOV7_OPENVINO(object):
         if (self.pre_api == False):
             img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
             img /= 255.0
-            img.transpose(2, 0, 1) # NHWC to NCHW
+            img = img.transpose(2, 0, 1) # NHWC to NCHW
         input_image = np.expand_dims(img, 0)
 
         # Set callback function for postprocess

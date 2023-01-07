@@ -27,16 +27,16 @@ Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/y
  ```
  You can also try running the code with [Preprocessing API](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Preprocessing_Overview.html) for performance optimization.
  ```shell
-  $ python python/image.py -m yolov7.onnx -i data/horse.jpg
+  $ python python/image.py -m yolov7.onnx -i data/horse.jpg -p
  ```
 
 - -i = path to image or video source;
 - -m = Path to IR .xml or .onnx file;
 - -d = Device name, e.g "CPU";
-- -p = use preprocessing api, True or False
+- -p = with/without preprocessing api
 - -bs = Batch size;
 - -n = number of infer requests;
-- -g = with/without grid in model, True or False;
+- -g = with/without grid in model
   
  ### ***C++*** (Ubuntu)
 Compile the source code
