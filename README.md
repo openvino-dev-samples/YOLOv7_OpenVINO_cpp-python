@@ -61,9 +61,6 @@ Tips: you can switch the device name to **"GPU"** to boost the performance.
 ## 7. Further optimization
 Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
 
-=======
-Tips: you can switch the device name to **"GPU"** to improve the performance.
-
 
 ## 8. Run IoT web app to count people with yolov7-tiny model
 This is a feature to run `webcam.py` to render computer vision results in the browser. 
