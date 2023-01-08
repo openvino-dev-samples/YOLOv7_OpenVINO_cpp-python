@@ -27,9 +27,17 @@ Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/y
  ```
  You can also try running the code with [Preprocessing API](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Preprocessing_Overview.html) for performance optimization.
  ```shell
-  $ python python/image.py -m yolov7.onnx -i data/horse.jpg
+  $ python python/image.py -m yolov7.onnx -i data/horse.jpg -p
  ```
 
+- -i = path to image or video source;
+- -m = Path to IR .xml or .onnx file;
+- -d = Device name, e.g "CPU";
+- -p = with/without preprocessing api
+- -bs = Batch size;
+- -n = number of infer requests;
+- -g = with/without grid in model
+  
  ### ***C++*** (Ubuntu)
 Compile the source code
 ```shell
@@ -50,13 +58,13 @@ Run inference
  ![horse_res](https://user-images.githubusercontent.com/91237924/179361905-44fcd4ac-7a9e-41f0-bd07-b6cf07245c04.jpg)
 
 
-## 6. Run with webcam
+ ## 6. Run with webcam
  You can also run the sample with webcam for real-time detection
   ```shell
   $ python python/webcam.py -m yolov7.onnx -i 0
  ```
  
-Tips: you can switch the device name to **"GPU"** to boost the performance.
+Tips: you can switch the device name to **"GPU"** to improve the performance.
 
 ## 7. Further optimization
 Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
@@ -74,7 +82,7 @@ The web app also contains a rest endpoint for people and video frame rate which 
 * FPS rest API GET request: `http://localhost:5000/fps/` to log data from external IoT platform
 * Future testing to include MQTT if desired
 
-## 0. Remote Deployment IoT Results Viewed In Browser
+## 9. Remote Deployment IoT Results Viewed In Browser
  
  ![iot_res](/data/iot_screenshot.PNG)
 
