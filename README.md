@@ -58,8 +58,14 @@ Run inference
  
 Tips: you can switch the device name to **"GPU"** to boost the performance.
 
+## 7. Further optimization
+Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
 
-## 7. Run IoT web app to count people with yolov7-tiny model
+=======
+Tips: you can switch the device name to **"GPU"** to improve the performance.
+
+
+## 8. Run IoT web app to count people with yolov7-tiny model
 This is a feature to run `webcam.py` to render computer vision results in the browser. 
 The idea for web browser access is for remote deployments purposes and for convenience purposes use a browser to monitor results if the remote computer can be accessed via VPN or port forwarding. 
 The web app also contains a rest endpoint for people and video frame rate which can be logged on an external source requesting locally data via a GET requests to the web app.
@@ -71,15 +77,13 @@ The web app also contains a rest endpoint for people and video frame rate which 
 * FPS rest API GET request: `http://localhost:5000/fps/` to log data from external IoT platform
 * Future testing to include MQTT if desired
 
-## 8. Remote Deployment IoT Results Viewed In Browser
+## 0. Remote Deployment IoT Results Viewed In Browser
  
  ![iot_res](/data/iot_screenshot.PNG)
 
 
-=======
-Tips: you can switch the device name to **"GPU"** to improve the performance.
 
-## 9. Further optimization
-Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
+
+
 
 
