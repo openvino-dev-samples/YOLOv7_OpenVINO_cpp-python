@@ -240,12 +240,25 @@ class YOLOV7_OPENVINO(object):
         self.infer_queue.set_callback(self.postprocess)
         # Capture camera source
         cap = cv2.VideoCapture(source)
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        fps = int(round(cap.get(cv2.CAP_PROP_FPS)))
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        out = cv2.VideoWriter('resultsvideo.avi',fourcc,fps,(width,height))
+        fps = 0
         src_img_list = []
         img_list = []
         count = 0
         start_time = time.time()
-        while(cap.isOpened()): 
-            _, frame = cap.read() 
+        while True:
+
+            ret, frame = cap.read()
+
+            if not ret:
+                break
+
+            t1 = time.time()
+
             img = self.letterbox(frame, self.img_size)
             src_size = frame.shape[:2]
             img = img.astype(dtype=np.float32)
@@ -254,22 +267,26 @@ class YOLOV7_OPENVINO(object):
             # Batching
             img_list.append(input_image)
             src_img_list.append(frame)
-            if (len(img_list) < self.batchsize):
+            if len(img_list) < self.batchsize:
                 continue
             img_batch = np.concatenate(img_list)
-            
             # Do inference
             self.infer_queue.start_async({self.input_layer.any_name: img_batch}, (src_img_list, src_size))
             src_img_list = []
             img_list = []
             count = count + self.batchsize
-            c = cv2.waitKey(1) 
-            if c==27: 
-                self.infer_queue.wait_all()
-                break 
-        cap.release() 
-        cv2.destroyAllWindows() 
-        end_time = time.time()
-        # Calculate the average FPS\n",
-        fps = count / (end_time - start_time)
-        print("throughput: {:.2f} fps".format(fps))
+
+            fps = (fps + (1. / (time.time() - t1))) / 2
+
+            print("fps",fps)
+                
+            frame = cv2.putText(frame, "FPS:%d " %fps, (0, 40), cv2.FONT_HERSHEY_SIMPLEX, 1,
+                                (0, 0, 255), 2)
+                
+            #out.write(frame)
+            if cv2.waitKey(25) & 0xFF == ord('q'):
+                break
+        out.release()
+        cap.release()
+        cv2.destroyAllWindows()  # Close the video window
+        
