@@ -14,6 +14,11 @@ if __name__ == "__main__":
                       help='Preprocessing api.')
     parser.add_argument('-g', '--grid', required=False, action='store_true', 
                       help='With grid in model.')
+    
+    args.add_argument('-o', '--output_dir', required=False, default='.', type=str,
+                      help='Output directory for predicted images.')
+
     args = parser.parse_args()
     yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, 1, 1, args.grid)
-    yolov7_detector.infer_image(args.input)
+    #yolov7_detector.infer_image(args.input) if use want to do on single image he can do using this
+    yolov7_detector.infer_images_in_folder(args.input,args.output_dir)
