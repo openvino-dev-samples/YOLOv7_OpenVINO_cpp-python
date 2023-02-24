@@ -5,6 +5,7 @@ import random
 import time
 from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
+import notebook_utils as utils
 
 class YOLOV7_OPENVINO(object):
     def __init__(self, model_path, device, pre_api, batchsize, nireq, grid):
