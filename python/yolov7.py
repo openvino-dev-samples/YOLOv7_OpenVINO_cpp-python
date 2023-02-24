@@ -1,4 +1,5 @@
 from openvino.runtime import Core
+import sys
 import cv2
 import numpy as np
 import random
@@ -7,6 +8,7 @@ import collections
 from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 import notebook_utils as utils
+from IPython import display
 
 class YOLOV7_OPENVINO(object):
     def __init__(self, model_path, device, pre_api, batchsize, nireq, grid):
