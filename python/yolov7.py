@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 import random
 import time
+import collections
 from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
 import notebook_utils as utils
