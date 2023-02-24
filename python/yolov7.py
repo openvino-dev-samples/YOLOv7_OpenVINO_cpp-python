@@ -241,7 +241,40 @@ class YOLOV7_OPENVINO(object):
         self.infer_queue.start_async({self.input_layer.any_name: input_image}, (src_img_list, src_size))
         self.infer_queue.wait_all()
         cv2.imwrite("yolov7_out.jpg", src_img_list[0])
+        
+    def infer_images_in_folder(self, input_folder_path, output_folder_path):
+        # Create output folder if it doesn't exist
+        if not os.path.exists(output_folder_path):
+            os.makedirs(output_folder_path)
 
+        # Loop through images in input folder
+        for filename in os.listdir(input_folder_path):
+            # Check if file is an image
+            if filename.endswith(".jpg") or filename.endswith(".jpeg") or filename.endswith(".png"):
+                # Get full path of input and output files
+                input_path = os.path.join(input_folder_path, filename)
+                output_path = os.path.join(output_folder_path, filename)
+
+                # Read image
+                src_img = cv2.imread(input_path)
+                src_img_list = []
+                src_img_list.append(src_img)
+                img = self.letterbox(src_img, self.img_size)
+                src_size = src_img.shape[:2]
+                img = img.astype(dtype=np.float32)
+                if (self.pre_api == False):
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
+                    img /= 255.0
+                    img.transpose(2, 0, 1) # NHWC to NCHW
+                input_image = np.expand_dims(img, 0)
+
+                # Set callback function for postprocess
+                self.infer_queue.set_callback(self.postprocess)
+                # Do inference
+                self.infer_queue.start_async({self.input_layer.any_name: input_image}, (src_img_list, src_size))
+                self.infer_queue.wait_all()
+                cv2.imwrite(output_path, src_img_list[0])        
+    
     def infer_cam(self, source, flip=False, use_popup=False, skip_first_frames=0):
         player = None
         try:
