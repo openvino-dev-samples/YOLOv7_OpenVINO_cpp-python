@@ -57,12 +57,12 @@ Run inference
  
  ![horse_res](https://user-images.githubusercontent.com/91237924/179361905-44fcd4ac-7a9e-41f0-bd07-b6cf07245c04.jpg)
 
-## Inference on multiple images at once
+## 6 Inference on multiple images at once
 ```shell
   $ python python/image.py -m weights/yolov7.onnx -i data/images/  -O data/output/
 ```
 
- ## 6. Run with webcam
+ ## 7. Run with webcam
  You can also run the sample with webcam for real-time detection
   ```shell
   $ python python/webcam.py -m yolov7.onnx -i 0
@@ -70,5 +70,5 @@ Run inference
  
 Tips: you can switch the device name to **"GPU"** to improve the performance.
 
-## 7. Further optimization
+## 8. Further optimization
 Try this notebook ([yolov7-optimization](https://github.com/openvinotoolkit/openvino_notebooks/tree/develop/notebooks/226-yolov7-optimization)) and quantize your YOLOv7 model to INT8.
