@@ -175,7 +175,6 @@ class YOLOV7_OPENVINO(object):
     
     def draw(self, img, boxinfo):
         for xyxy, conf, cls in boxinfo:
-            
             score = f"{conf:.2f}"
             label_text = f"{self.classes[int(cls)]} {score}"
             self.plot_one_box(xyxy, img, label=label_text, color=self.colors[int(cls)], line_thickness=2)
@@ -246,7 +245,7 @@ class YOLOV7_OPENVINO(object):
         # Create output folder if it doesn't exist
         if not os.path.exists(output_folder_path):
             os.makedirs(output_folder_path)
-
+            
         # Loop through images in input folder
         for filename in os.listdir(input_folder_path):
             # Check if file is an image
@@ -290,7 +289,6 @@ class YOLOV7_OPENVINO(object):
                     winname=title, flags=cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE
                 )
 
-
             # Set callback function for postprocess
             self.infer_queue.set_callback(self.postprocess)
             # Capture camera source
@@ -302,12 +300,9 @@ class YOLOV7_OPENVINO(object):
             start_time = time.time()
             while True:
                 frame = player.next()
-
-
                 if frame is None:
                     print("source ended")
                     break
-
                 t1 = time.time()
                 img = self.letterbox(frame, self.img_size)
                 src_size = frame.shape[:2]
@@ -331,10 +326,9 @@ class YOLOV7_OPENVINO(object):
                 # Mean processing time [ms].
                 processing_time = np.mean(processing_times) * 1000
                 fps = 1000 / processing_time
-
-                ###fps = (fps + (1. / (time.time() - t1))) / 2
-                print("fps",fps)
-                #out.write(frame)
+                
+                #fps = (fps + (1. / (time.time() - t1))) / 2
+                
                 cv2.putText(
                     img=frame,
                     text=f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)",
@@ -375,4 +369,3 @@ class YOLOV7_OPENVINO(object):
                 player.stop()
             if use_popup:
                 cv2.destroyAllWindows()
-        
