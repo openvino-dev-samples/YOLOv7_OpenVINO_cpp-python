@@ -51,7 +51,7 @@ You can also uncomment the code in ```CMakeLists.txt``` to trigger [Preprocessin
 
 Run inference
  ```shell
-  $ yolov7 yolov7.onnx data/horses.jpg 'CPU'
+  $ yolov7 yolov7.onnx data/horses.jpg 'CPU' false
  ```
 ## 5. Results
  
