@@ -297,7 +297,6 @@ int main(int argc, char* argv[]) {
         std::vector<Object> objects8;
         std::vector<Object> objects16;
         std::vector<Object> objects32;
-        std::vector<Object> objects;
 
         generate_proposals(8, result_p8, prob_threshold, objects8);
         proposals.insert(proposals.end(), objects8.begin(), objects8.end());
