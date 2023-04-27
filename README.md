@@ -12,22 +12,23 @@ Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/o
 ## 2. Prepare the model
 Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/yolov7)
 
-## 3. Export the ONNX model
+## 3. Export the ONNX model and conver it to OpenVINO IR
 ```shell
   $ git clone git@github.com:WongKinYiu/yolov7.git
   $ cd yolov7/models
   $ python export.py --weights yolov7.pt
+  $ mo -m yolov7.onnx --compress_to_fp16
  ```
  
 ## 4. Run inference
  The input image can be found in [YOLOv7's repository](https://github.com/WongKinYiu/yolov7/blob/main/inference/images/horses.jpg)
  ### ***Python***
  ```shell
-  $ python python/image.py -m yolov7.onnx -i data/horse.jpg -d "CPU" -p False
+  $ python python/image.py -m yolov7.xml -i data/horse.jpg -d "CPU" -p False
  ```
  You can also try running the code with [Preprocessing API](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Preprocessing_Overview.html) for performance optimization.
  ```shell
-  $ python python/image.py -m yolov7.onnx -i data/horse.jpg -p
+  $ python python/image.py -m yolov7.xml -i data/horse.jpg -p
  ```
 
 - -i = path to image or video source;
@@ -51,7 +52,7 @@ You can also uncomment the code in ```CMakeLists.txt``` to trigger [Preprocessin
 
 Run inference
  ```shell
-  $ yolov7 yolov7.onnx data/horses.jpg 'CPU' false
+  $ yolov7 yolov7.xml data/horses.jpg 'CPU' false
  ```
 ## 5. Results
  
@@ -61,7 +62,7 @@ Run inference
  ## 6. Run with webcam
  You can also run the sample with webcam for real-time detection
   ```shell
-  $ python python/webcam.py -m yolov7.onnx -i 0
+  $ python python/webcam.py -m yolov7.xml -i 0
  ```
  
 Tips: you can switch the device name to **"GPU"** to improve the performance.
