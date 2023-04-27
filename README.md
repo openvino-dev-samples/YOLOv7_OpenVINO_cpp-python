@@ -12,7 +12,7 @@ Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/o
 ## 2. Prepare the model
 Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/yolov7)
 
-## 3. Export the ONNX model and conver it to OpenVINO IR
+## 3. Export the ONNX model and convert it to OpenVINO IR
 ```shell
   $ git clone git@github.com:WongKinYiu/yolov7.git
   $ cd yolov7/models
