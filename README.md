@@ -54,6 +54,8 @@ Run inference
  ```shell
   $ yolov7 yolov7.xml data/horses.jpg 'CPU' false
  ```
+ 
+ * *false' means without grid in model
 ## 5. Results
  
  ![horse_res](https://user-images.githubusercontent.com/91237924/179361905-44fcd4ac-7a9e-41f0-bd07-b6cf07245c04.jpg)
