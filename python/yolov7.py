@@ -1,10 +1,14 @@
 from openvino.runtime import Core
+import sys
 import cv2
 import numpy as np
 import random
 import time
+import collections
 from openvino.preprocess import PrePostProcessor, ColorFormat
 from openvino.runtime import Layout, AsyncInferQueue, PartialShape
+import notebook_utils as utils
+from IPython import display
 
 class YOLOV7_OPENVINO(object):
     def __init__(self, model_path, device, pre_api, batchsize, nireq, grid):
@@ -171,7 +175,9 @@ class YOLOV7_OPENVINO(object):
     
     def draw(self, img, boxinfo):
         for xyxy, conf, cls in boxinfo:
-            self.plot_one_box(xyxy, img, label=self.classes[int(cls)], color=self.colors[int(cls)], line_thickness=2)
+            score = f"{conf:.2f}"
+            label_text = f"{self.classes[int(cls)]} {score}"
+            self.plot_one_box(xyxy, img, label=label_text, color=self.colors[int(cls)], line_thickness=2)
         cv2.imshow('Press ESC to Exit', img) 
         cv2.waitKey(1)
 
@@ -234,42 +240,132 @@ class YOLOV7_OPENVINO(object):
         self.infer_queue.start_async({self.input_layer.any_name: input_image}, (src_img_list, src_size))
         self.infer_queue.wait_all()
         cv2.imwrite("yolov7_out.jpg", src_img_list[0])
-
-    def infer_cam(self, source):
-        # Set callback function for postprocess
-        self.infer_queue.set_callback(self.postprocess)
-        # Capture camera source
-        cap = cv2.VideoCapture(source)
-        src_img_list = []
-        img_list = []
-        count = 0
-        start_time = time.time()
-        while(cap.isOpened()): 
-            _, frame = cap.read() 
-            img = self.letterbox(frame, self.img_size)
-            src_size = frame.shape[:2]
-            img = img.astype(dtype=np.float32)
-            # Preprocessing
-            input_image = np.expand_dims(img, 0)
-            # Batching
-            img_list.append(input_image)
-            src_img_list.append(frame)
-            if (len(img_list) < self.batchsize):
-                continue
-            img_batch = np.concatenate(img_list)
+        
+    def infer_images_in_folder(self, input_folder_path, output_folder_path):
+        # Create output folder if it doesn't exist
+        if not os.path.exists(output_folder_path):
+            os.makedirs(output_folder_path)
             
-            # Do inference
-            self.infer_queue.start_async({self.input_layer.any_name: img_batch}, (src_img_list, src_size))
+        # Loop through images in input folder
+        for filename in os.listdir(input_folder_path):
+            # Check if file is an image
+            if filename.endswith(".jpg") or filename.endswith(".jpeg") or filename.endswith(".png"):
+                # Get full path of input and output files
+                input_path = os.path.join(input_folder_path, filename)
+                output_path = os.path.join(output_folder_path, filename)
+
+                # Read image
+                src_img = cv2.imread(input_path)
+                src_img_list = []
+                src_img_list.append(src_img)
+                img = self.letterbox(src_img, self.img_size)
+                src_size = src_img.shape[:2]
+                img = img.astype(dtype=np.float32)
+                if (self.pre_api == False):
+                    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # BGR to RGB
+                    img /= 255.0
+                    img.transpose(2, 0, 1) # NHWC to NCHW
+                input_image = np.expand_dims(img, 0)
+
+                # Set callback function for postprocess
+                self.infer_queue.set_callback(self.postprocess)
+                # Do inference
+                self.infer_queue.start_async({self.input_layer.any_name: input_image}, (src_img_list, src_size))
+                self.infer_queue.wait_all()
+                cv2.imwrite(output_path, src_img_list[0])        
+    
+    def infer_cam(self, source, flip=False, use_popup=False, skip_first_frames=0):
+        player = None
+        try:
+            # Create a video player to play with target fps.
+            player = utils.VideoPlayer(
+                source=source, flip=flip, fps=25, skip_first_frames=skip_first_frames
+            )
+            # Start capturing.
+            player.start()
+            if use_popup:
+                title = "Press ESC to Exit"
+                cv2.namedWindow(
+                    winname=title, flags=cv2.WINDOW_GUI_NORMAL | cv2.WINDOW_AUTOSIZE
+                )
+
+            # Set callback function for postprocess
+            self.infer_queue.set_callback(self.postprocess)
+            # Capture camera source
+            processing_times = collections.deque()
+
             src_img_list = []
             img_list = []
-            count = count + self.batchsize
-            c = cv2.waitKey(1) 
-            if c==27: 
-                self.infer_queue.wait_all()
-                break 
-        cap.release() 
-        cv2.destroyAllWindows() 
-        end_time = time.time()
-        # Calculate the average FPS\n",
-        fps = count / (end_time - start_time)
-        print("throughput: {:.2f} fps".format(fps))
+            count = 0
+            start_time = time.time()
+            while True:
+                frame = player.next()
+                if frame is None:
+                    print("source ended")
+                    break
+                t1 = time.time()
+                img = self.letterbox(frame, self.img_size)
+                src_size = frame.shape[:2]
+                img = img.astype(dtype=np.float32)
+                # Preprocessing
+                input_image = np.expand_dims(img, 0)
+                # Batching
+                img_list.append(input_image)
+                src_img_list.append(frame)
+                if len(img_list) < self.batchsize:
+                    continue
+                img_batch = np.concatenate(img_list)
+                # Do inference
+                self.infer_queue.start_async({self.input_layer.any_name: img_batch}, (src_img_list, src_size))
+                src_img_list = []
+                img_list = []
+                stop_time = time.time()
+                processing_times.append(stop_time - start_time)
+                if len(processing_times) > 200:
+                    processing_times.popleft()
+                # Mean processing time [ms].
+                processing_time = np.mean(processing_times) * 1000
+                fps = 1000 / processing_time
+                
+                #fps = (fps + (1. / (time.time() - t1))) / 2
+                
+                cv2.putText(
+                    img=frame,
+                    text=f"Inference time: {processing_time:.1f}ms ({fps:.1f} FPS)",
+                    org=(20, 40),
+                    fontFace=cv2.FONT_HERSHEY_COMPLEX,
+                    fontScale=600 / 1000,
+                    color=(0, 0, 255),
+                    thickness=1,
+                    lineType=cv2.LINE_AA,
+                )
+                
+                if use_popup:
+                    cv2.imshow(winname=title, mat=frame)
+                    key = cv2.waitKey(1)
+                    # escape = 27
+                    if key == 27:
+                        break
+                else:
+                    # Encode numpy array to jpg.
+                    _, encoded_img = cv2.imencode(
+                        ext=".jpg", img=frame, params=[cv2.IMWRITE_JPEG_QUALITY, 100]
+                    )
+                    # Create an IPython image.
+                    i = display.Image(data=encoded_img)
+                    # Display the image in this notebook.
+                    display.clear_output(wait=True)
+                    display.display(i)
+
+        # ctrl-c
+        except KeyboardInterrupt:
+            print("Interrupted")
+        # any different error
+        except RuntimeError as e:
+            print(e)
+        finally:
+            if player is not None:
+                # Stop capturing.
+                player.stop()
+            if use_popup:
+                cv2.destroyAllWindows()
