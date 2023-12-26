@@ -7,7 +7,7 @@ This repository will demostrate how to deploy a offical YOLOv7 pre-trained model
  ```
 
 ### ***C++*** (Ubuntu)
-Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/latest/openvino_docs_install_guides_installing_openvino_from_archive_linux.html) and [OpenCV](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html)
+Please follow the Guides to install [OpenVINO](https://docs.openvino.ai/2023.2/openvino_docs_install_guides_installing_openvino_from_archive_linux.html) and [OpenCV](https://docs.opencv.org/4.x/d7/d9f/tutorial_linux_install.html)
 
 ## 2. Prepare the model
 Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/yolov7)
@@ -15,20 +15,21 @@ Download YOLOv7 pre-trained weight from [YOLOv7](https://github.com/WongKinYiu/y
 ## 3. Export the ONNX model and convert it to OpenVINO IR
 ```shell
   $ git clone git@github.com:WongKinYiu/yolov7.git
-  $ cd yolov7/models
+  $ cd yolov7
+  $ pip install -r requirements
   $ python export.py --weights yolov7.pt
-  $ mo -m yolov7.onnx --compress_to_fp16
+  $ ovc yolov7.onnx
  ```
  
 ## 4. Run inference
  The input image can be found in [YOLOv7's repository](https://github.com/WongKinYiu/yolov7/blob/main/inference/images/horses.jpg)
  ### ***Python***
  ```shell
-  $ python python/image.py -m yolov7.xml -i data/horse.jpg -d "CPU" -p False
+  $ python python/image.py -m path_to/yolov7.xml -i data/horse.jpg -d "CPU"
  ```
  You can also try running the code with [Preprocessing API](https://docs.openvino.ai/latest/openvino_docs_OV_UG_Preprocessing_Overview.html) for performance optimization.
  ```shell
-  $ python python/image.py -m yolov7.xml -i data/horse.jpg -p
+  $ python python/image.py -m path_to/yolov7.xml -i data/horse.jpg -d "CPU" -p
  ```
 
 - -i = path to image or video source;
@@ -44,7 +45,7 @@ Compile the source code
 ```shell
   $ cd cpp
   $ mkdir build && cd build
-  $ source '~/intel/openvino_2022.1.0.643/bin/setupvars.sh'
+  $ source '~/intel/openvino_2023.2/bin/setupvars.sh'
   $ cmake ..
   $ make
  ```
@@ -52,10 +53,9 @@ You can also uncomment the code in ```CMakeLists.txt``` to trigger [Preprocessin
 
 Run inference
  ```shell
-  $ yolov7 yolov7.xml data/horses.jpg 'CPU' false
+  $ yolov7 path_to/yolov7.xml ../../data/horses.jpg 'CPU'
  ```
  
-- *false* means without grid in model
 ## 5. Results
  
  ![horse_res](https://user-images.githubusercontent.com/91237924/179361905-44fcd4ac-7a9e-41f0-bd07-b6cf07245c04.jpg)
@@ -64,7 +64,7 @@ Run inference
  ## 6. Run with webcam
  You can also run the sample with webcam for real-time detection
   ```shell
-  $ python python/webcam.py -m yolov7.xml -i 0
+  $ python python/webcam.py -m path_to/yolov7.xml -i 0
  ```
  
 Tips: you can switch the device name to **"GPU"** to improve the performance.

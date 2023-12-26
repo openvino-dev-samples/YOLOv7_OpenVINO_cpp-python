@@ -13,7 +13,8 @@
 
 using namespace std;
 
-struct Object {
+struct Object
+{
     cv::Rect_<float> rect;
     int label;
     float prob;
@@ -30,11 +31,13 @@ const std::vector<std::string> class_names = {
     "microwave", "oven", "toaster", "sink", "refrigerator", "book", "clock", "vase", "scissors", "teddy bear",
     "hair drier", "toothbrush"};
 
-inline float sigmoid(float x) {
+inline float sigmoid(float x)
+{
     return static_cast<float>(1.f / (1.f + exp(-x)));
 }
 
-cv::Mat letterbox(cv::Mat& src, int h, int w, std::vector<float>& padding) {
+cv::Mat letterbox(cv::Mat &src, int h, int w, std::vector<float> &padding)
+{
     // Resize and pad image while meeting stride-multiple constraints
     int in_w = src.cols;
     int in_h = src.rows;
@@ -68,7 +71,8 @@ cv::Mat letterbox(cv::Mat& src, int h, int w, std::vector<float>& padding) {
     return resize_img;
 }
 
-cv::Rect scale_box(cv::Rect box, std::vector<float>& padding) {
+cv::Rect scale_box(cv::Rect box, std::vector<float> &padding)
+{
     // remove the padding area
     cv::Rect scaled_box;
     scaled_box.x = box.x - padding[0];
@@ -78,7 +82,8 @@ cv::Rect scale_box(cv::Rect box, std::vector<float>& padding) {
     return scaled_box;
 }
 
-void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, float raw_w, cv::Mat& frame, const std::vector<std::string>& classes) {
+void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, float raw_w, cv::Mat &frame, const std::vector<std::string> &classes)
+{
     float x0 = box.x;
     float y0 = box.y;
     float x1 = box.x + box.width;
@@ -99,7 +104,8 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, f
     // Draw the bouding boxes and put the label text on the origin image
     cv::rectangle(frame, cv::Point(x0, y0), cv::Point(x1, y1), cv::Scalar(0, 255, 0), 1);
     std::string label = cv::format("%.2f", conf);
-    if (!classes.empty()) {
+    if (!classes.empty())
+    {
         CV_Assert(classId < (int)classes.size());
         label = classes[classId] + ": " + label;
     }
@@ -110,7 +116,8 @@ void drawPred(int classId, float conf, cv::Rect box, float ratio, float raw_h, f
     cv::putText(frame, label, cv::Point(x0, y0), cv::FONT_HERSHEY_SIMPLEX, 0.5, cv::Scalar(), 1.5);
 }
 
-static void generate_proposals(int stride, const float* feat, float prob_threshold, std::vector<Object>& objects) {
+static void generate_proposals(int stride, const float *feat, float prob_threshold, std::vector<Object> &objects)
+{
     // get the results from proposals
     float anchors[18] = {12, 16, 19, 36, 40, 28, 36, 75, 76, 55, 72, 146, 142, 110, 192, 243, 459, 401};
     int anchor_num = 3;
@@ -126,9 +133,12 @@ static void generate_proposals(int stride, const float* feat, float prob_thresho
         anchor_group = 2;
 
     // 3 x h x w x (80 + 5)
-    for (int anchor = 0; anchor <= anchor_num - 1; anchor++) {
-        for (int i = 0; i <= feat_h - 1; i++) {
-            for (int j = 0; j <= feat_w - 1; j++) {
+    for (int anchor = 0; anchor <= anchor_num - 1; anchor++)
+    {
+        for (int i = 0; i <= feat_h - 1; i++)
+        {
+            for (int j = 0; j <= feat_w - 1; j++)
+            {
                 float box_prob = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + 4];
                 box_prob = sigmoid(box_prob);
 
@@ -144,10 +154,12 @@ static void generate_proposals(int stride, const float* feat, float prob_thresho
                 int idx = 0;
 
                 // get the class id with maximum confidence
-                for (int t = 5; t < 85; ++t) {
+                for (int t = 5; t < 85; ++t)
+                {
                     double tp = feat[anchor * feat_h * feat_w * (cls_num + 5) + i * feat_w * (cls_num + 5) + j * (cls_num + 5) + t];
                     tp = sigmoid(tp);
-                    if (tp > max_prob) {
+                    if (tp > max_prob)
+                    {
                         max_prob = tp;
                         idx = t;
                     }
@@ -181,7 +193,8 @@ static void generate_proposals(int stride, const float* feat, float prob_thresho
     }
 }
 
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[])
+{
     // set the hyperparameters
     int img_h = 640;
     int img_w = 640;
@@ -192,9 +205,8 @@ int main(int argc, char* argv[]) {
     const float nms_threshold = 0.60f;
 
     const std::string model_path{argv[1]};
-    const char* image_path{argv[2]};
+    const char *image_path{argv[2]};
     const std::string device_name{argv[3]};
-    const bool grid{argv[4]};
 
     cv::Mat src_img = cv::imread(image_path);
 
@@ -206,6 +218,7 @@ int main(int argc, char* argv[]) {
 
     // -------- Step 2. Read a model --------
     std::shared_ptr<ov::Model> model = core.read_model(model_path);
+    auto output_num = model->get_output_size();
 
     // -------- Step 3. Preprocessing API--------
     ov::preprocess::PrePostProcessor prep(model);
@@ -234,27 +247,37 @@ int main(int argc, char* argv[]) {
     start = cv::getTickCount();
     boxed.convertTo(boxed, CV_32FC3);
 
-    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float*)boxed.data);
+    ov::Tensor input_tensor(input_port.get_element_type(), input_port.get_shape(), (float *)boxed.data);
     infer_request.set_input_tensor(input_tensor);
+
     // -------- Step 7. Start inference --------
+    auto t1 = std::chrono::high_resolution_clock::now();
     infer_request.infer();
+    auto t2 = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> fp_ms = t2 - t1;
+
+    std::cout << "inference took " << fp_ms.count() << " ms, " << std::endl;
 
     // -------- Step 8. Process output --------
     std::vector<Object> proposals;
-    if (grid == true) {
+    if (output_num == 1)
+    {
         int total_num = 25200;
         auto output_tensor = infer_request.get_output_tensor(0);
-        const float* result = output_tensor.data<const float>();
+        const float *result = output_tensor.data<const float>();
         std::vector<Object> objects;
-        for (int i = 0; i <= total_num - 1; i++) {
+        for (int i = 0; i <= total_num - 1; i++)
+        {
             double max_prob = 0;
             int idx = 0;
             float box_prob = result[i * 85 + 4];
             if (box_prob < prob_threshold)
                 continue;
-            for (int t = 5; t < 85; ++t) {
+            for (int t = 5; t < 85; ++t)
+            {
                 double tp = result[i * 85 + t];
-                if (tp > max_prob) {
+                if (tp > max_prob)
+                {
                     max_prob = tp;
                     idx = t;
                 }
@@ -272,13 +295,15 @@ int main(int argc, char* argv[]) {
             }
         }
         proposals.insert(proposals.end(), objects.begin(), objects.end());
-    } else {
+    }
+    else
+    {
         auto output_tensor_p8 = infer_request.get_output_tensor(0);
-        const float* result_p8 = output_tensor_p8.data<const float>();
+        const float *result_p8 = output_tensor_p8.data<const float>();
         auto output_tensor_p16 = infer_request.get_output_tensor(1);
-        const float* result_p16 = output_tensor_p16.data<const float>();
+        const float *result_p16 = output_tensor_p16.data<const float>();
         auto output_tensor_p32 = infer_request.get_output_tensor(2);
-        const float* result_p32 = output_tensor_p32.data<const float>();
+        const float *result_p32 = output_tensor_p32.data<const float>();
 
         std::vector<Object> objects8;
         std::vector<Object> objects16;
@@ -296,7 +321,8 @@ int main(int argc, char* argv[]) {
     std::vector<float> confidences;
     std::vector<cv::Rect> boxes;
 
-    for (size_t i = 0; i < proposals.size(); i++) {
+    for (size_t i = 0; i < proposals.size(); i++)
+    {
         classIds.push_back(proposals[i].label);
         confidences.push_back(proposals[i].prob);
         boxes.push_back(proposals[i].rect);
@@ -313,7 +339,8 @@ int main(int argc, char* argv[]) {
     float ratio_y = (float)raw_h / img_h;
     end = cv::getTickCount();
 
-    for (size_t i = 0; i < picked.size(); i++) {
+    for (size_t i = 0; i < picked.size(); i++)
+    {
         int idx = picked[i];
         cv::Rect box = boxes[idx];
         cv::Rect scaled_box = scale_box(box, padding);

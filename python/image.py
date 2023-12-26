@@ -12,8 +12,6 @@ if __name__ == "__main__":
                       help='Device name.')
     parser.add_argument('-p', '--pre_api', required=False, action='store_true', 
                       help='Preprocessing api.')
-    parser.add_argument('-g', '--grid', required=False, action='store_true', 
-                      help='With grid in model.')
     args = parser.parse_args()
-    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, 1, 1, args.grid)
+    yolov7_detector=yolov7.YOLOV7_OPENVINO(args.model, args.device, args.pre_api, 1, 1)
     yolov7_detector.infer_image(args.input)
